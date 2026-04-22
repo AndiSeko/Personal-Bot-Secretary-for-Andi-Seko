@@ -14,6 +14,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import config
 import db
 import utils
+import ai
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,9 @@ async def cmd_start(message: Message):
             "/list — список напоминаний\n"
             "/delete <id> — удалить напоминание\n"
             "/deleteall — удалить все напоминания\n"
-            "/app — открыть веб-кабинет",
+            "/app — открыть веб-кабинет\n"
+            "/ask <вопрос> — спросить AI-ассистента\n"
+            "/clearai — очистить историю диалога с AI",
             reply_markup=kb,
         )
     else:
@@ -85,6 +88,33 @@ async def cmd_app(message: Message):
         InlineKeyboardButton(text="📱 Открыть кабинет", web_app=WebAppInfo(url=config.WEB_URL))
     ]])
     await message.answer("📱 Веб-кабинет секретаря:", reply_markup=kb)
+
+
+@router.message(IsOwner(), Command("ask"))
+async def cmd_ask(message: Message):
+    question = message.text.split(maxsplit=1)
+    if len(question) < 2:
+        await message.answer("❌ Формат: /ask <вопрос>")
+        return
+
+    msg = await message.answer("🤔 Думаю...")
+    answer = await ai.ask(question[1])
+    await msg.edit_text(answer)
+
+
+@router.message(IsOwner(), Command("clearai"))
+async def cmd_clearai(message: Message):
+    ai.clear_history()
+    await message.answer("🧹 История диалога с AI очищена.")
+
+
+@router.message(IsOwner(), F.text, ~F.reply_to_message)
+async def owner_text_to_ai(message: Message):
+    if not ai.is_available():
+        return
+    msg = await message.answer("🤔 Думаю...")
+    answer = await ai.ask(message.text)
+    await msg.edit_text(answer)
 
 
 @router.message(IsOwner(), Command("remind"))
@@ -296,11 +326,25 @@ async def reply_photo_to_user(message: Message, bot: Bot):
 async def on_startup(bot: Bot):
     await db.init_db()
 
+    from aiogram.types import BotCommand
+    await bot.set_my_commands([
+        BotCommand(command="remind", description="Разовое напоминание"),
+        BotCommand(command="recurring", description="Цикличное напоминание"),
+        BotCommand(command="list", description="Список напоминаний"),
+        BotCommand(command="delete", description="Удалить напоминание"),
+        BotCommand(command="deleteall", description="Удалить все напоминания"),
+        BotCommand(command="ask", description="Спросить AI-ассистента"),
+        BotCommand(command="clearai", description="Очистить контекст AI"),
+        BotCommand(command="app", description="Веб-кабинет"),
+    ])
+
     owner_id = await db.get_owner_id()
     if owner_id:
         config.OWNER_ID = owner_id
 
     await load_reminders(bot)
+
+    ai.init()
 
     if not scheduler.running:
         scheduler.start()
