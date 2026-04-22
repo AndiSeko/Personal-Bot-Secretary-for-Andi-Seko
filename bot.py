@@ -96,7 +96,12 @@ async def cmd_clearai(message: Message):
     await message.answer("🧹 История диалога с AI очищена.")
 
 
-@router.message(IsOwner(), F.text, ~F.reply_to_message, ~Command())
+class NotCommand(Filter):
+    async def __call__(self, message: Message) -> bool:
+        return not message.text.startswith("/")
+
+
+@router.message(IsOwner(), F.text, NotCommand(), ~F.reply_to_message)
 async def owner_text_to_ai(message: Message):
     if not ai.is_available():
         return
