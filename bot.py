@@ -1,4 +1,3 @@
-import re
 import asyncio
 import logging
 from datetime import datetime, timedelta
@@ -11,109 +10,22 @@ from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, W
 from aiogram.client.default import DefaultBotProperties
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.date import DateTrigger
-
-import pytz
 
 import config
 import db
+import utils
 
 logger = logging.getLogger(__name__)
 
 router = Router()
 scheduler = AsyncIOScheduler(timezone=config.TIMEZONE)
-tz = pytz.timezone(config.TIMEZONE)
-
-
-def parse_relative_time(time_str: str) -> datetime:
-    total_seconds = 0
-    matches = re.findall(r'(\d+)([smhdw])', time_str.lower())
-    if not matches:
-        raise ValueError(f"Неверный формат: {time_str}")
-    for value, unit in matches:
-        value = int(value)
-        multipliers = {'s': 1, 'm': 60, 'h': 3600, 'd': 86400, 'w': 604800}
-        total_seconds += value * multipliers[unit]
-    return datetime.now(tz) + timedelta(seconds=total_seconds)
-
-
-def parse_absolute_time(time_str: str) -> datetime:
-    for fmt in ("%d.%m.%Y %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m %H:%M", "%d.%m %H:%M:%S", "%H:%M", "%H:%M:%S"):
-        try:
-            dt = datetime.strptime(time_str, fmt)
-            if dt.year == 1900:
-                dt = dt.replace(year=datetime.now().year)
-            if dt.month == 1 and dt.day == 1 and fmt.startswith("%H"):
-                now = datetime.now(tz)
-                dt = dt.replace(year=now.year, month=now.month, day=now.day)
-                result = tz.localize(dt)
-                if result < now:
-                    result += timedelta(days=1)
-                return result
-            return tz.localize(dt)
-        except ValueError:
-            continue
-    raise ValueError(f"Неверный формат: {time_str}")
-
-
-def parse_time(time_str: str) -> datetime:
-    try:
-        return parse_relative_time(time_str)
-    except ValueError:
-        return parse_absolute_time(time_str)
-
-
-def format_interval(seconds: int) -> str:
-    if seconds % 604800 == 0:
-        return f"каждые {seconds // 604800} нед."
-    if seconds % 86400 == 0:
-        return f"каждые {seconds // 86400} дн."
-    if seconds % 3600 == 0:
-        return f"каждые {seconds // 3600} ч."
-    if seconds % 60 == 0:
-        return f"каждые {seconds // 60} мин."
-    return f"каждые {seconds} сек."
-
-
-def schedule_reminder(reminder_id: int, remind_at: datetime, bot: Bot):
-    scheduler.add_job(
-        fire_reminder,
-        trigger=DateTrigger(run_date=remind_at),
-        id=f"reminder_{reminder_id}",
-        replace_existing=True,
-        args=[reminder_id, bot],
-    )
-
-
-async def fire_reminder(reminder_id: int, bot: Bot):
-    reminder = await db.get_reminder_by_id(reminder_id)
-    if not reminder:
-        return
-
-    owner_id = await db.get_owner_id()
-    if not owner_id:
-        return
-
-    prefix = "🔔🔁 Цикличное напоминание" if reminder['is_cyclic'] else "🔔 Напоминание"
-    try:
-        await bot.send_message(owner_id, f"{prefix}:\n{reminder['text']}")
-    except Exception as e:
-        logger.error("Failed to send reminder %s: %s", reminder_id, e)
-        return
-
-    if reminder['is_cyclic']:
-        next_time = datetime.now(tz) + timedelta(seconds=reminder['interval_seconds'])
-        await db.update_remind_at(reminder_id, next_time.strftime("%Y-%m-%d %H:%M:%S"))
-        schedule_reminder(reminder_id, next_time, bot)
-    else:
-        await db.delete_reminder(reminder_id)
 
 
 async def load_reminders(bot: Bot):
     reminders = await db.get_active_reminders()
-    now = datetime.now(tz)
+    now = datetime.now(utils.tz)
     for r in reminders:
-        remind_at = tz.localize(datetime.strptime(r['remind_at'], "%Y-%m-%d %H:%M:%S"))
+        remind_at = utils.tz.localize(datetime.strptime(r['remind_at'], "%Y-%m-%d %H:%M:%S"))
         if r['is_cyclic'] and remind_at < now:
             interval = timedelta(seconds=r['interval_seconds'])
             while remind_at < now:
@@ -122,7 +34,7 @@ async def load_reminders(bot: Bot):
         elif not r['is_cyclic'] and remind_at < now:
             await db.delete_reminder(r['id'])
             continue
-        schedule_reminder(r['id'], remind_at, bot)
+        utils.schedule_reminder(r['id'], remind_at, bot, scheduler)
 
 
 class IsOwner(Filter):
@@ -175,32 +87,9 @@ async def cmd_app(message: Message):
     await message.answer("📱 Веб-кабинет секретаря:", reply_markup=kb)
 
 
-def parse_remind_args(text: str) -> tuple[str, str]:
-    tokens = text.split(maxsplit=1)
-    if len(tokens) < 2:
-        return "", ""
-    args = tokens[1]
-    parts = args.split()
-    if len(parts) < 2:
-        return "", ""
-
-    if re.match(r'^\d+[smhdw]', parts[0], re.IGNORECASE):
-        return parts[0], " ".join(parts[1:])
-
-    if re.match(r'^\d{1,2}\.\d{1,2}(\.\d{4})?$', parts[0]):
-        if len(parts) >= 3 and re.match(r'^\d{1,2}:\d{2}(:\d{2})?$', parts[1]):
-            return f"{parts[0]} {parts[1]}", " ".join(parts[2:])
-        return parts[0], " ".join(parts[1:])
-
-    if re.match(r'^\d{1,2}:\d{2}(:\d{2})?$', parts[0]):
-        return parts[0], " ".join(parts[1:])
-
-    return parts[0], " ".join(parts[1:])
-
-
 @router.message(IsOwner(), Command("remind"))
 async def cmd_remind(message: Message, bot: Bot):
-    time_str, text = parse_remind_args(message.text)
+    time_str, text = utils.parse_remind_args(message.text)
     if not time_str or not text:
         await message.answer(
             "❌ Формат: /remind <время> <текст>\n"
@@ -213,18 +102,18 @@ async def cmd_remind(message: Message, bot: Bot):
         return
 
     try:
-        remind_at = parse_time(time_str)
+        remind_at = utils.parse_time(time_str)
     except ValueError as e:
         await message.answer(f"❌ {e}")
         return
 
-    if remind_at < datetime.now(tz):
+    if remind_at < datetime.now(utils.tz):
         await message.answer("❌ Это время уже прошло!")
         return
 
     remind_at_str = remind_at.strftime("%Y-%m-%d %H:%M:%S")
     reminder_id = await db.add_reminder(text, remind_at_str)
-    schedule_reminder(reminder_id, remind_at, bot)
+    utils.schedule_reminder(reminder_id, remind_at, bot, scheduler)
 
     await message.answer(
         f"✅ Напоминание #{reminder_id} установлено!\n"
@@ -248,8 +137,8 @@ async def cmd_recurring(message: Message, bot: Bot):
         return
 
     try:
-        remind_at = parse_relative_time(parts[1])
-        interval_seconds = int((remind_at - datetime.now(tz)).total_seconds())
+        remind_at = utils.parse_relative_time(parts[1])
+        interval_seconds = int((remind_at - datetime.now(utils.tz)).total_seconds())
     except ValueError as e:
         await message.answer(f"❌ {e}")
         return
@@ -260,11 +149,11 @@ async def cmd_recurring(message: Message, bot: Bot):
 
     remind_at_str = remind_at.strftime("%Y-%m-%d %H:%M:%S")
     reminder_id = await db.add_reminder(parts[2], remind_at_str, is_cyclic=True, interval_seconds=interval_seconds)
-    schedule_reminder(reminder_id, remind_at, bot)
+    utils.schedule_reminder(reminder_id, remind_at, bot, scheduler)
 
     await message.answer(
         f"✅ Цикличное напоминание #{reminder_id} установлено!\n"
-        f"🔁 {format_interval(interval_seconds)}\n"
+        f"🔁 {utils.format_interval(interval_seconds)}\n"
         f"⏰ Первое срабатывание: {remind_at.strftime('%d.%m.%Y %H:%M')}\n"
         f"📝 {parts[2]}"
     )
@@ -283,7 +172,7 @@ async def cmd_list(message: Message):
         if r['is_cyclic']:
             lines.append(
                 f"🔁 #{r['id']} — {r['text']}\n"
-                f"   {format_interval(r['interval_seconds'])}, след.: {remind_at.strftime('%d.%m.%Y %H:%M')}"
+                f"   {utils.format_interval(r['interval_seconds'])}, след.: {remind_at.strftime('%d.%m.%Y %H:%M')}"
             )
         else:
             lines.append(

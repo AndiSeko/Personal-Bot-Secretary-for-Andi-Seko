@@ -13,12 +13,9 @@ from aiogram import Bot
 
 import db
 import config
+import utils
 
-from datetime import datetime, timedelta
-
-import pytz
-
-tz = pytz.timezone(config.TIMEZONE)
+from datetime import datetime
 
 WEB_PASSWORD = os.getenv("WEB_PASSWORD", "secretary")
 
@@ -61,7 +58,6 @@ def get_user_from_init_data(init_data: str) -> dict | None:
     user_json = pairs.get("user", [None])[0]
     if not user_json:
         return None
-    import json
     try:
         return json.loads(user_json)
     except Exception:
@@ -109,7 +105,7 @@ async def index(request: Request):
         dt = datetime.strptime(r['remind_at'], "%Y-%m-%d %H:%M:%S")
         r['remind_at_fmt'] = dt.strftime("%d.%m.%Y %H:%M")
         if r['is_cyclic'] and r['interval_seconds']:
-            r['interval_fmt'] = format_interval(r['interval_seconds'])
+            r['interval_fmt'] = utils.format_interval(r['interval_seconds'])
         else:
             r['interval_fmt'] = ""
 
@@ -149,22 +145,23 @@ async def add_reminder(request: Request, time_str: str = Form(...), text: str = 
     if not check_auth(request):
         return RedirectResponse(url="/", status_code=303)
 
-    now = datetime.now(tz)
+    from datetime import timedelta
+    now = datetime.now(utils.tz)
 
     if is_cyclic == "on":
         try:
-            rel_time = parse_relative_time(time_str)
+            rel_time = utils.parse_relative_time(time_str)
             interval_seconds = int((rel_time - now).total_seconds())
         except Exception:
             interval_seconds = 3600
         if interval_seconds < 60:
             interval_seconds = 60
-        remind_at = now + __import__("datetime").timedelta(seconds=interval_seconds)
+        remind_at = now + timedelta(seconds=interval_seconds)
         remind_at_str = remind_at.strftime("%Y-%m-%d %H:%M:%S")
         reminder_id = await db.add_reminder(text, remind_at_str, is_cyclic=True, interval_seconds=interval_seconds)
     else:
         try:
-            remind_at = parse_time(time_str)
+            remind_at = utils.parse_time(time_str)
         except ValueError:
             return RedirectResponse(url="/", status_code=303)
         if remind_at < now:
@@ -173,7 +170,7 @@ async def add_reminder(request: Request, time_str: str = Form(...), text: str = 
         reminder_id = await db.add_reminder(text, remind_at_str)
 
     if bot_instance:
-        schedule_reminder(reminder_id, remind_at, bot_instance)
+        utils.schedule_reminder(reminder_id, remind_at, bot_instance, _scheduler)
 
     return RedirectResponse(url="/", status_code=303)
 
