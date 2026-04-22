@@ -1,33 +1,38 @@
 import os
+import json
 import hmac
 import hashlib
 import urllib.parse
 from pathlib import Path
 
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from aiogram import Bot
 
 import db
 import config
-from bot import scheduler, tz, schedule_reminder, parse_time, format_interval, parse_relative_time
 
-from datetime import datetime
+from datetime import datetime, timedelta
+
+import pytz
+
+tz = pytz.timezone(config.TIMEZONE)
 
 WEB_PASSWORD = os.getenv("WEB_PASSWORD", "secretary")
-WEB_PORT = int(os.getenv("WEB_PORT", "8000"))
 
 app = FastAPI(title="Secretary")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
 bot_instance: Bot | None = None
+_scheduler = None
 
 
-def setup(bot: Bot):
-    global bot_instance
+def setup(bot: Bot, scheduler):
+    global bot_instance, _scheduler
     bot_instance = bot
+    _scheduler = scheduler
 
 
 def verify_webapp_signature(init_data: str) -> bool:
@@ -96,8 +101,8 @@ async def index(request: Request):
     reminders = await db.get_all_reminders()
     messages = await db.get_messages(limit=50)
 
-    active_count = sum(1 for r in reminders if r['is_active'])
-    cyclic_count = sum(1 for r in reminders if r['is_active'] and r['is_cyclic'])
+    active_count = len(reminders)
+    cyclic_count = sum(1 for r in reminders if r['is_cyclic'])
     msg_count = len(messages)
 
     for r in reminders:
@@ -179,11 +184,11 @@ async def delete_reminder(request: Request, reminder_id: int):
         return RedirectResponse(url="/", status_code=303)
 
     try:
-        scheduler.remove_job(f"reminder_{reminder_id}")
+        _scheduler.remove_job(f"reminder_{reminder_id}")
     except Exception:
         pass
 
-    await db.deactivate_reminder(reminder_id)
+    await db.delete_reminder(reminder_id)
     return RedirectResponse(url="/", status_code=303)
 
 
@@ -195,9 +200,9 @@ async def delete_all_reminders(request: Request):
     reminders = await db.get_active_reminders()
     for r in reminders:
         try:
-            scheduler.remove_job(f"reminder_{r['id']}")
+            _scheduler.remove_job(f"reminder_{r['id']}")
         except Exception:
             pass
 
-    await db.deactivate_all_reminders()
+    await db.delete_all_reminders()
     return RedirectResponse(url="/", status_code=303)

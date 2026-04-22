@@ -76,24 +76,21 @@ async def get_active_reminders() -> list[dict]:
 async def get_reminder_by_id(reminder_id: int) -> dict | None:
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
-        async with db.execute("SELECT * FROM reminders WHERE id = ? AND is_active = 1", (reminder_id,)) as cursor:
+        async with db.execute("SELECT * FROM reminders WHERE id = ?", (reminder_id,)) as cursor:
             row = await cursor.fetchone()
             return dict(row) if row else None
 
 
-async def deactivate_reminder(reminder_id: int) -> bool:
+async def delete_reminder(reminder_id: int) -> bool:
     async with aiosqlite.connect(DB_PATH) as db:
-        cursor = await db.execute(
-            "UPDATE reminders SET is_active = 0 WHERE id = ? AND is_active = 1",
-            (reminder_id,),
-        )
+        cursor = await db.execute("DELETE FROM reminders WHERE id = ?", (reminder_id,))
         await db.commit()
         return cursor.rowcount > 0
 
 
-async def deactivate_all_reminders() -> int:
+async def delete_all_reminders() -> int:
     async with aiosqlite.connect(DB_PATH) as db:
-        cursor = await db.execute("UPDATE reminders SET is_active = 0 WHERE is_active = 1")
+        cursor = await db.execute("DELETE FROM reminders")
         await db.commit()
         return cursor.rowcount
 
@@ -141,7 +138,7 @@ async def get_messages(limit: int = 50) -> list[dict]:
 async def get_all_reminders() -> list[dict]:
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
-        async with db.execute("SELECT * FROM reminders ORDER BY is_active DESC, remind_at") as cursor:
+        async with db.execute("SELECT * FROM reminders ORDER BY remind_at") as cursor:
             rows = await cursor.fetchall()
             return [dict(r) for r in rows]
 

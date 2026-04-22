@@ -106,7 +106,7 @@ async def fire_reminder(reminder_id: int, bot: Bot):
         await db.update_remind_at(reminder_id, next_time.strftime("%Y-%m-%d %H:%M:%S"))
         schedule_reminder(reminder_id, next_time, bot)
     else:
-        await db.deactivate_reminder(reminder_id)
+        await db.delete_reminder(reminder_id)
 
 
 async def load_reminders(bot: Bot):
@@ -120,7 +120,7 @@ async def load_reminders(bot: Bot):
                 remind_at += interval
             await db.update_remind_at(r['id'], remind_at.strftime("%Y-%m-%d %H:%M:%S"))
         elif not r['is_cyclic'] and remind_at < now:
-            await db.deactivate_reminder(r['id'])
+            await db.delete_reminder(r['id'])
             continue
         schedule_reminder(r['id'], remind_at, bot)
 
@@ -162,7 +162,7 @@ async def cmd_start(message: Message):
         )
     else:
         await message.answer(
-            f"Привет! Я личный секретарь @{config.OWNER_USERNAME}.\n"
+            f"Привет! Я личный секретарь Andi Seko.\n"
             "Напиши мне сообщение, и я перешлю его."
         )
 
@@ -312,7 +312,7 @@ async def cmd_delete(message: Message):
     except Exception:
         pass
 
-    if await db.deactivate_reminder(reminder_id):
+    if await db.delete_reminder(reminder_id):
         await message.answer(f"✅ Напоминание #{reminder_id} удалено.")
     else:
         await message.answer(f"❌ Напоминание #{reminder_id} не найдено.")
@@ -327,7 +327,7 @@ async def cmd_deleteall(message: Message):
         except Exception:
             pass
 
-    count = await db.deactivate_all_reminders()
+    count = await db.delete_all_reminders()
     await message.answer(f"✅ Удалено напоминаний: {count}")
 
 

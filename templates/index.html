@@ -89,9 +89,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <div class="card">
         <div class="card-top">
           <span class="card-id">#{{r.id}}</span>
-          {% if not r.is_active %}
-            <span class="card-type inactive">Неактивно</span>
-          {% elif r.is_cyclic %}
+          {% if r.is_cyclic %}
             <span class="card-type cyclic">Цикличное</span>
           {% else %}
             <span class="card-type once">Разовое</span>
@@ -102,9 +100,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
           <span>{{r.remind_at_fmt}}</span>
           {% if r.interval_fmt %}<span>{{r.interval_fmt}}</span>{% endif %}
         </div>
-        {% if r.is_active %}
         <button class="card-del" onclick="delReminder({{r.id}})" title="Удалить">✕</button>
-        {% endif %}
       </div>
       {% endfor %}
       {% if active_count > 0 %}
