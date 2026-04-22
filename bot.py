@@ -90,25 +90,13 @@ async def cmd_app(message: Message):
     await message.answer("📱 Веб-кабинет секретаря:", reply_markup=kb)
 
 
-@router.message(IsOwner(), Command("ask"))
-async def cmd_ask(message: Message):
-    question = message.text.split(maxsplit=1)
-    if len(question) < 2:
-        await message.answer("❌ Формат: /ask <вопрос>")
-        return
-
-    msg = await message.answer("🤔 Думаю...")
-    answer = await ai.ask(question[1])
-    await msg.edit_text(answer)
-
-
 @router.message(IsOwner(), Command("clearai"))
 async def cmd_clearai(message: Message):
     ai.clear_history()
     await message.answer("🧹 История диалога с AI очищена.")
 
 
-@router.message(IsOwner(), F.text, ~F.reply_to_message)
+@router.message(IsOwner(), F.text, ~F.reply_to_message, ~Command())
 async def owner_text_to_ai(message: Message):
     if not ai.is_available():
         return
@@ -326,21 +314,36 @@ async def reply_photo_to_user(message: Message, bot: Bot):
 async def on_startup(bot: Bot):
     await db.init_db()
 
-    from aiogram.types import BotCommand
-    await bot.set_my_commands([
-        BotCommand(command="remind", description="Разовое напоминание"),
-        BotCommand(command="recurring", description="Цикличное напоминание"),
-        BotCommand(command="list", description="Список напоминаний"),
-        BotCommand(command="delete", description="Удалить напоминание"),
-        BotCommand(command="deleteall", description="Удалить все напоминания"),
-        BotCommand(command="ask", description="Спросить AI-ассистента"),
-        BotCommand(command="clearai", description="Очистить контекст AI"),
-        BotCommand(command="app", description="Веб-кабинет"),
-    ])
+    from aiogram.types import BotCommand, BotCommandScopeChat, BotCommandScopeAllPrivateChats
+
+    await bot.set_my_commands(
+        [
+            BotCommand(command="remind", description="Разовое напоминание"),
+            BotCommand(command="recurring", description="Цикличное напоминание"),
+            BotCommand(command="list", description="Список напоминаний"),
+            BotCommand(command="delete", description="Удалить напоминание"),
+            BotCommand(command="deleteall", description="Удалить все"),
+            BotCommand(command="clearai", description="Очистить контекст AI"),
+            BotCommand(command="app", description="Веб-кабинет"),
+        ],
+        scope=BotCommandScopeAllPrivateChats(),
+    )
 
     owner_id = await db.get_owner_id()
     if owner_id:
         config.OWNER_ID = owner_id
+        await bot.set_my_commands(
+            [
+                BotCommand(command="remind", description="Разовое напоминание"),
+                BotCommand(command="recurring", description="Цикличное напоминание"),
+                BotCommand(command="list", description="Список напоминаний"),
+                BotCommand(command="delete", description="Удалить напоминание"),
+                BotCommand(command="deleteall", description="Удалить все"),
+                BotCommand(command="clearai", description="Очистить контекст AI"),
+                BotCommand(command="app", description="Веб-кабинет"),
+            ],
+            scope=BotCommandScopeChat(chat_id=owner_id),
+        )
 
     await load_reminders(bot)
 
