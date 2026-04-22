@@ -3,9 +3,11 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 
+import uvicorn
+
 from aiogram import Bot, Dispatcher, F, Router
 from aiogram.filters import Command, Filter
-from aiogram.types import Message
+from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from aiogram.client.default import DefaultBotProperties
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -142,6 +144,9 @@ async def cmd_start(message: Message):
     if user_id == stored_owner or username == config.OWNER_USERNAME:
         config.OWNER_ID = user_id
         await db.set_owner(user_id, username)
+        kb = InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="📱 Открыть кабинет", web_app=WebAppInfo(url=config.WEB_URL))
+        ]])
         await message.answer(
             "👋 Привет, босс! Я твой личный секретарь.\n\n"
             "📋 Команды:\n"
@@ -151,13 +156,23 @@ async def cmd_start(message: Message):
             "  Интервал: 30m / 1h / 2d / 1w\n"
             "/list — список напоминаний\n"
             "/delete <id> — удалить напоминание\n"
-            "/deleteall — удалить все напоминания"
+            "/deleteall — удалить все напоминания\n"
+            "/app — открыть веб-кабинет",
+            reply_markup=kb,
         )
     else:
         await message.answer(
             f"Привет! Я личный секретарь @{config.OWNER_USERNAME}.\n"
             "Напиши мне сообщение, и я перешлю его."
         )
+
+
+@router.message(IsOwner(), Command("app"))
+async def cmd_app(message: Message):
+    kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="📱 Открыть кабинет", web_app=WebAppInfo(url=config.WEB_URL))
+    ]])
+    await message.answer("📱 Веб-кабинет секретаря:", reply_markup=kb)
 
 
 def parse_remind_args(text: str) -> tuple[str, str]:
@@ -328,6 +343,7 @@ async def forward_text_to_owner(message: Message, bot: Bot):
     try:
         sent = await bot.send_message(config.OWNER_ID, f"[{tag}]: {message.text}")
         await db.save_message_map(sent.message_id, user.id)
+        await db.save_message(user.id, tag, text=message.text, is_from_owner=False)
     except Exception as e:
         logger.error("Failed to forward message: %s", e)
         await message.answer("⚠️ Не удалось доставить сообщение.")
@@ -350,6 +366,7 @@ async def forward_photo_to_owner(message: Message, bot: Bot):
             caption=caption,
         )
         await db.save_message_map(sent.message_id, user.id)
+        await db.save_message(user.id, tag, text=message.caption, photo_file_id=message.photo[-1].file_id, is_from_owner=False)
     except Exception as e:
         logger.error("Failed to forward photo: %s", e)
         await message.answer("⚠️ Не удалось доставить фото.")
@@ -363,6 +380,8 @@ async def reply_to_user(message: Message, bot: Bot):
 
     try:
         await bot.send_message(original_user_id, message.text)
+        owner_tag = f"@{config.OWNER_USERNAME}"
+        await db.save_message(config.OWNER_ID, owner_tag, text=message.text, is_from_owner=True)
         await message.answer("✅ Ответ отправлен.")
     except Exception as e:
         logger.error("Failed to send reply: %s", e)
@@ -377,6 +396,8 @@ async def reply_photo_to_user(message: Message, bot: Bot):
 
     try:
         await bot.send_photo(original_user_id, photo=message.photo[-1].file_id, caption=message.caption)
+        owner_tag = f"@{config.OWNER_USERNAME}"
+        await db.save_message(config.OWNER_ID, owner_tag, text=message.caption, photo_file_id=message.photo[-1].file_id, is_from_owner=True)
         await message.answer("✅ Фото отправлено.")
     except Exception as e:
         logger.error("Failed to send photo reply: %s", e)
@@ -395,7 +416,14 @@ async def on_startup(bot: Bot):
     if not scheduler.running:
         scheduler.start()
 
-    logger.info("Bot started")
+    import web
+    web.setup(bot)
+
+    config_obj = uvicorn.Config(app=web.app, host="0.0.0.0", port=config.WEB_PORT, log_level="info")
+    server = uvicorn.Server(config_obj)
+    asyncio.create_task(server.serve())
+
+    logger.info("Bot + Web App started (port %s)", config.WEB_PORT)
 
 
 async def on_shutdown(bot: Bot):

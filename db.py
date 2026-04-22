@@ -26,6 +26,15 @@ async def init_db():
                 user_id INTEGER NOT NULL,
                 username TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                from_user_id INTEGER NOT NULL,
+                from_username TEXT NOT NULL,
+                text TEXT,
+                photo_file_id TEXT,
+                is_from_owner INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT (datetime('now'))
+            );
         """)
         await db.commit()
 
@@ -109,6 +118,32 @@ async def get_original_user_id(bot_msg_id: int) -> int | None:
         async with db.execute("SELECT from_user_id FROM message_map WHERE bot_msg_id = ?", (bot_msg_id,)) as cursor:
             row = await cursor.fetchone()
             return row[0] if row else None
+
+
+async def save_message(from_user_id: int, from_username: str, text: str | None = None, photo_file_id: str | None = None, is_from_owner: bool = False) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "INSERT INTO messages (from_user_id, from_username, text, photo_file_id, is_from_owner) VALUES (?, ?, ?, ?, ?)",
+            (from_user_id, from_username, text, photo_file_id, int(is_from_owner)),
+        )
+        await db.commit()
+        return cursor.lastrowid
+
+
+async def get_messages(limit: int = 50) -> list[dict]:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT * FROM messages ORDER BY id DESC LIMIT ?", (limit,)) as cursor:
+            rows = await cursor.fetchall()
+            return [dict(r) for r in reversed(rows)]
+
+
+async def get_all_reminders() -> list[dict]:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT * FROM reminders ORDER BY is_active DESC, remind_at") as cursor:
+            rows = await cursor.fetchall()
+            return [dict(r) for r in rows]
 
 
 

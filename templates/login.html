@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Secretary</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--tg-theme-bg-color,#1a1a2e);color:var(--tg-theme-text-color,#e0e0e0);min-height:100vh;display:flex;align-items:center;justify-content:center}
+.login-box{background:var(--tg-theme-secondary-bg-color,#16213e);border-radius:16px;padding:32px;width:90%;max-width:360px;text-align:center}
+h2{margin-bottom:24px;font-size:22px}
+input{width:100%;padding:14px;border:1px solid var(--tg-theme-hint-color,#4a4a6a);border-radius:10px;background:var(--tg-theme-bg-color,#1a1a2e);color:var(--tg-theme-text-color,#e0e0e0);font-size:16px;outline:none;margin-bottom:16px}
+input:focus{border-color:var(--tg-theme-button-color,#5b7fff)}
+button{width:100%;padding:14px;border:none;border-radius:10px;background:var(--tg-theme-button-color,#5b7fff);color:var(--tg-theme-button-text-color,#fff);font-size:16px;cursor:pointer;transition:opacity .2s}
+button:hover{opacity:.85}
+.error{color:#ff6b6b;margin-bottom:12px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="login-box">
+<h2>Secretary</h2>
+{% if error %}<p class="error">Неверный пароль</p>{% endif %}
+<form method="post" action="/login">
+<input type="password" name="password" placeholder="Пароль" autofocus required>
+<button type="submit">Войти</button>
+</form>
+</div>
+</body>
+</html>
