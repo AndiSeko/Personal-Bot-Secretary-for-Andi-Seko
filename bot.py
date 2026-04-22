@@ -417,7 +417,7 @@ async def on_startup(bot: Bot):
         scheduler.start()
 
     import web
-    web.setup(bot)
+    web.setup(bot, scheduler)
 
     config_obj = uvicorn.Config(app=web.app, host="0.0.0.0", port=config.WEB_PORT, log_level="info")
     server = uvicorn.Server(config_obj)
