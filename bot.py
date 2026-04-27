@@ -337,6 +337,9 @@ async def on_startup(bot: Bot):
     owner_id = await db.get_owner_id()
     if owner_id:
         config.OWNER_ID = owner_id
+    elif config.OWNER_ID:
+        username = config.OWNER_USERNAME
+        await db.set_owner(config.OWNER_ID, username)
         await bot.set_my_commands(
             [
                 BotCommand(command="remind", description="Разовое напоминание"),

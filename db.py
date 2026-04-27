@@ -1,8 +1,9 @@
 import aiosqlite
 from datetime import datetime
-from config import OWNER_ID
+import config
 
-DB_PATH = "secretary.db"
+DB_PATH = (config.DATA_DIR + "/") if config.DATA_DIR else ""
+DB_PATH += "secretary.db"
 
 
 async def init_db():
