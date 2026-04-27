@@ -141,35 +141,71 @@ async def logout():
 
 
 @app.post("/reminders/add")
-async def add_reminder(request: Request, time_str: str = Form(...), text: str = Form(...), is_cyclic: str = Form("off")):
+async def add_reminder(request: Request, text: str = Form(...)):
     if not check_auth(request):
         return RedirectResponse(url="/", status_code=303)
 
-    from datetime import timedelta
+    form = await request.form()
+    mode = form.get("mode", "exact")
     now = datetime.now(utils.tz)
 
-    if is_cyclic == "on":
+    remind_at = None
+    interval_seconds = None
+
+    if mode == "cyclic":
+        date_val = form.get("date", "")
+        time_val = form.get("time", "")
+        if not date_val or not time_val:
+            return RedirectResponse(url="/", status_code=303)
+
         try:
-            rel_time = utils.parse_relative_time(time_str)
-            interval_seconds = int((rel_time - now).total_seconds())
-        except Exception:
-            interval_seconds = 3600
-        if interval_seconds < 60:
-            interval_seconds = 60
-        remind_at = now + timedelta(seconds=interval_seconds)
-        remind_at_str = remind_at.strftime("%Y-%m-%d %H:%M:%S")
-        reminder_id = await db.add_reminder(text, remind_at_str, is_cyclic=True, interval_seconds=interval_seconds)
-    else:
-        try:
-            remind_at = utils.parse_time(time_str)
+            local_tz = utils.tz
+            remind_at = local_tz.localize(datetime.strptime(f"{date_val} {time_val}", "%Y-%m-%d %H:%M"))
         except ValueError:
             return RedirectResponse(url="/", status_code=303)
+
+        int_d = int(form.get("interval_days", 0) or 0)
+        int_h = int(form.get("interval_hours", 0) or 0)
+        int_m = int(form.get("interval_minutes", 0) or 0)
+        interval_seconds = int_d * 86400 + int_h * 3600 + int_m * 60
+        if interval_seconds < 60:
+            interval_seconds = 60
+
         if remind_at < now:
+            remind_at = now + timedelta(seconds=interval_seconds)
+
+        remind_at_str = remind_at.strftime("%Y-%m-%d %H:%M:%S")
+        reminder_id = await db.add_reminder(text, remind_at_str, is_cyclic=True, interval_seconds=interval_seconds)
+
+    elif mode == "after":
+        a_d = int(form.get("after_days", 0) or 0)
+        a_h = int(form.get("after_hours", 0) or 0)
+        a_m = int(form.get("after_minutes", 0) or 0)
+        if a_d + a_h + a_m == 0:
             return RedirectResponse(url="/", status_code=303)
+
+        remind_at = now + timedelta(days=a_d, hours=a_h, minutes=a_m)
         remind_at_str = remind_at.strftime("%Y-%m-%d %H:%M:%S")
         reminder_id = await db.add_reminder(text, remind_at_str)
 
-    if bot_instance:
+    else:
+        date_val = form.get("date", "")
+        time_val = form.get("time", "")
+        if not date_val or not time_val:
+            return RedirectResponse(url="/", status_code=303)
+
+        try:
+            remind_at = utils.tz.localize(datetime.strptime(f"{date_val} {time_val}", "%Y-%m-%d %H:%M"))
+        except ValueError:
+            return RedirectResponse(url="/", status_code=303)
+
+        if remind_at < now:
+            return RedirectResponse(url="/", status_code=303)
+
+        remind_at_str = remind_at.strftime("%Y-%m-%d %H:%M:%S")
+        reminder_id = await db.add_reminder(text, remind_at_str)
+
+    if bot_instance and remind_at:
         utils.schedule_reminder(reminder_id, remind_at, bot_instance, _scheduler)
 
     return RedirectResponse(url="/", status_code=303)

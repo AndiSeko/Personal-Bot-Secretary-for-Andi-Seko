@@ -26,7 +26,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .card-type{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600}
 .card-type.once{background:rgba(91,127,255,.2);color:#5b7fff}
 .card-type.cyclic{background:rgba(255,165,2,.2);color:#ffa502}
-.card-type.inactive{background:rgba(107,114,128,.2);color:#6b7280}
 .card-text{font-size:15px;line-height:1.4;margin-bottom:6px;word-break:break-word;padding-right:36px}
 .card-meta{font-size:12px;color:var(--hc);display:flex;gap:10px;flex-wrap:wrap}
 .card-del{position:absolute;top:12px;right:12px;background:rgba(255,71,87,.15);border:none;color:var(--bd);width:28px;height:28px;border-radius:50%;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .2s}
@@ -36,20 +35,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .msg-tag.owner{color:var(--suc)}
 .msg-text{font-size:14px;line-height:1.4;word-break:break-word}
 .msg-time{font-size:11px;color:var(--hc);margin-top:4px}
-.msg-photo{max-width:100%;border-radius:8px;margin-top:6px}
-.fab{position:fixed;bottom:80px;right:20px;width:56px;height:56px;border-radius:50%;background:var(--bc);color:var(--btc);border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 16px rgba(91,127,255,.4);z-index:200;transition:transform .2s}
+.fab{position:fixed;bottom:24px;right:20px;width:56px;height:56px;border-radius:50%;background:var(--bc);color:var(--btc);border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 16px rgba(91,127,255,.4);z-index:200;transition:transform .2s}
 .fab:active{transform:scale(.9)}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:flex-end;justify-content:center}
 .modal-overlay.show{display:flex}
-.modal{background:var(--sbg);border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px;animation:slideUp .25s ease}
+.modal{background:var(--sbg);border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px;animation:slideUp .25s ease;max-height:90vh;overflow-y:auto}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .modal h3{font-size:18px;margin-bottom:16px}
 .modal label{display:block;font-size:13px;color:var(--hc);margin-bottom:6px;margin-top:12px}
-.modal input,.modal select{width:100%;padding:12px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:var(--bg);color:var(--tc);font-size:15px;outline:none}
+.modal input[type=text],.modal input[type=number],.modal input[type=date],.modal input[type=time]{width:100%;padding:12px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:var(--bg);color:var(--tc);font-size:15px;outline:none}
 .modal input:focus{border-color:var(--bc)}
-.modal .check-row{display:flex;align-items:center;gap:10px;margin-top:14px}
-.modal .check-row input[type=checkbox]{width:20px;height:20px;accent-color:var(--bc)}
-.modal .check-row label{margin:0;font-size:14px;color:var(--tc)}
+input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-calendar-picker-indicator{filter:invert(1)}
+.mode-switch{display:flex;gap:6px;margin-bottom:14px}
+.mode-btn{flex:1;padding:10px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:transparent;color:var(--hc);font-size:13px;cursor:pointer;text-align:center;transition:all .2s}
+.mode-btn.active{background:var(--bc);color:var(--btc);border-color:var(--bc)}
+.time-row{display:flex;gap:8px}
+.time-row input{flex:1}
+.dur-row{display:flex;gap:6px;align-items:center}
+.dur-row input{width:60px;text-align:center;flex:none}
+.dur-row span{font-size:12px;color:var(--hc);flex:none}
+.freq-section{margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.06)}
+.check-row{display:flex;align-items:center;gap:10px;margin-top:14px}
+.check-row input[type=checkbox]{width:20px;height:20px;accent-color:var(--bc)}
+.check-row label{margin:0;font-size:14px;color:var(--tc)}
 .modal-btns{display:flex;gap:10px;margin-top:20px}
 .modal-btns button{flex:1;padding:13px;border:none;border-radius:10px;font-size:15px;cursor:pointer;transition:opacity .2s}
 .modal-btns .btn-ok{background:var(--bc);color:var(--btc)}
@@ -71,9 +79,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div class="header">
   <h1>Secretary</h1>
   <div class="stats">
-    <span id="st-active">Активных: {{active_count}}</span>
-    <span id="st-cyclic">Цикличных: {{cyclic_count}}</span>
-    <span id="st-msg">Сообщений: {{msg_count}}</span>
+    <span>Активных: {{active_count}}</span>
+    <span>Цикличных: {{cyclic_count}}</span>
+    <span>Сообщений: {{msg_count}}</span>
   </div>
 </div>
 
@@ -134,14 +142,60 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
   <div class="modal" onclick="event.stopPropagation()">
     <h3>Новое напоминание</h3>
-    <label>Время / Интервал</label>
-    <input type="text" id="inp-time" placeholder="5m / 2h / 1d / 22.04.2026 15:30">
-    <label>Текст</label>
-    <input type="text" id="inp-text" placeholder="Проверить почту">
+
     <div class="check-row">
-      <input type="checkbox" id="inp-cyclic">
-      <label for="inp-cyclic">Цикличное</label>
+      <input type="checkbox" id="inp-cyclic" onchange="toggleCyclic()">
+      <label for="inp-cyclic">Цикличное напоминание</label>
     </div>
+
+    <div id="once-mode">
+      <div class="mode-switch">
+        <button class="mode-btn active" onclick="setOnceMode('exact')">Точное время</button>
+        <button class="mode-btn" onclick="setOnceMode('after')">Через</button>
+      </div>
+
+      <div id="once-exact">
+        <label>Дата</label>
+        <input type="date" id="inp-date">
+        <label>Время</label>
+        <input type="time" id="inp-time-at">
+      </div>
+
+      <div id="once-after" style="display:none">
+        <label>Напомнить через</label>
+        <div class="dur-row">
+          <input type="number" id="inp-aft-d" min="0" value="0" placeholder="0">
+          <span>дн</span>
+          <input type="number" id="inp-aft-h" min="0" max="23" value="0" placeholder="0">
+          <span>ч</span>
+          <input type="number" id="inp-aft-m" min="0" max="59" value="5" placeholder="5">
+          <span>мин</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="cyclic-mode" style="display:none">
+      <label>Дата первого срабатывания</label>
+      <input type="date" id="inp-c-date">
+      <label>Время первого срабатывания</label>
+      <input type="time" id="inp-c-time">
+
+      <div class="freq-section">
+        <label>Повторять каждые</label>
+        <div class="dur-row">
+          <input type="number" id="inp-int-d" min="0" value="0" placeholder="0">
+          <span>дн</span>
+          <input type="number" id="inp-int-h" min="0" max="23" value="1" placeholder="1">
+          <span>ч</span>
+          <input type="number" id="inp-int-m" min="0" max="59" value="0" placeholder="0">
+          <span>мин</span>
+        </div>
+      </div>
+    </div>
+
+    <label>Текст напоминания</label>
+    <input type="text" id="inp-text" placeholder="Проверить почту">
+
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeModal()">Отмена</button>
       <button class="btn-ok" onclick="addReminder()">Создать</button>
@@ -163,21 +217,91 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 const tg=window.Telegram?.WebApp;
 if(tg){tg.ready();tg.expand();tg.setHeaderColor('var(--sbg)')}
 
+function nowISO(){
+  const d=new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  return{date:`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,time:`${pad(d.getHours())}:${pad(d.getMinutes())}`};
+}
+
 function switchTab(name){
   document.querySelectorAll('.tab').forEach((t,i)=>{t.classList.toggle('active',['reminders','messages'][i]===name)});
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
 }
 
-function openModal(){document.getElementById('modal-overlay').classList.add('show')}
-function closeModal(e){if(!e||e.target===e.currentTarget){document.getElementById('modal-overlay').classList.remove('show');document.getElementById('inp-time').value='';document.getElementById('inp-text').value='';document.getElementById('inp-cyclic').checked=false}}
+function openModal(){
+  const n=nowISO();
+  document.getElementById('inp-date').value=n.date;
+  document.getElementById('inp-time-at').value=n.time;
+  document.getElementById('inp-c-date').value=n.date;
+  document.getElementById('inp-c-time').value=n.time;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function closeModal(e){
+  if(!e||e.target===e.currentTarget){
+    document.getElementById('modal-overlay').classList.remove('show');
+    document.getElementById('inp-text').value='';
+    document.getElementById('inp-cyclic').checked=false;
+    document.getElementById('once-mode').style.display='';
+    document.getElementById('cyclic-mode').style.display='none';
+    setOnceMode('exact');
+  }
+}
+
+function setOnceMode(mode){
+  document.querySelectorAll('#once-mode .mode-btn').forEach((b,i)=>b.classList.toggle('active',['exact','after'][i]===mode));
+  document.getElementById('once-exact').style.display=mode==='exact'?'':'none';
+  document.getElementById('once-after').style.display=mode==='after'?'':'none';
+}
+
+function toggleCyclic(){
+  const on=document.getElementById('inp-cyclic').checked;
+  document.getElementById('once-mode').style.display=on?'none':'';
+  document.getElementById('cyclic-mode').style.display=on?'':'none';
+}
 
 async function addReminder(){
-  const time=document.getElementById('inp-time').value.trim();
   const text=document.getElementById('inp-text').value.trim();
+  if(!text)return;
   const cyclic=document.getElementById('inp-cyclic').checked;
-  if(!time||!text)return;
-  const fd=new FormData();fd.append('time_str',time);fd.append('text',text);fd.append('is_cyclic',cyclic?'on':'off');
+  const fd=new FormData();
+  fd.append('text',text);
+
+  if(cyclic){
+    const d=document.getElementById('inp-c-date').value;
+    const t=document.getElementById('inp-c-time').value;
+    if(!d||!t)return;
+    fd.append('mode','cyclic');
+    fd.append('date',d);
+    fd.append('time',t);
+    const intD=parseInt(document.getElementById('inp-int-d').value)||0;
+    const intH=parseInt(document.getElementById('inp-int-h').value)||0;
+    const intM=parseInt(document.getElementById('inp-int-m').value)||0;
+    fd.append('interval_days',intD);
+    fd.append('interval_hours',intH);
+    fd.append('interval_minutes',intM);
+  }else{
+    const exactVisible=document.getElementById('once-exact').style.display!=='none';
+    if(exactVisible){
+      const d=document.getElementById('inp-date').value;
+      const t=document.getElementById('inp-time-at').value;
+      if(!d||!t)return;
+      fd.append('mode','exact');
+      fd.append('date',d);
+      fd.append('time',t);
+    }else{
+      const aD=parseInt(document.getElementById('inp-aft-d').value)||0;
+      const aH=parseInt(document.getElementById('inp-aft-h').value)||0;
+      const aM=parseInt(document.getElementById('inp-aft-m').value)||0;
+      if(aD+aH+aM===0)return;
+      fd.append('mode','after');
+      fd.append('after_days',aD);
+      fd.append('after_hours',aH);
+      fd.append('after_minutes',aM);
+    }
+  }
+
   await fetch('/reminders/add',{method:'POST',body:fd});
   location.reload();
 }
