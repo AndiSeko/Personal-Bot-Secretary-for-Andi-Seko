@@ -7,71 +7,70 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 :root{--bg:var(--tg-theme-bg-color,#1a1a2e);--sbg:var(--tg-theme-secondary-bg-color,#16213e);--tc:var(--tg-theme-text-color,#e0e0e0);--hc:var(--tg-theme-hint-color,#6b7280);--bc:var(--tg-theme-button-color,#5b7fff);--btc:var(--tg-theme-button-text-color,#fff);--bd:var(--tg-theme-destructive-text-color,#ff4757);--suc:#2ed573}
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--tc);min-height:100vh;padding-bottom:72px}
-.header{padding:16px 20px 12px;position:sticky;top:0;background:var(--sbg);z-index:100;border-bottom:1px solid rgba(255,255,255,.06)}
-.header h1{font-size:20px;font-weight:700}
-.header .stats{display:flex;gap:12px;margin-top:8px;font-size:12px;color:var(--hc)}
-.header .stats span{background:rgba(91,127,255,.15);padding:3px 10px;border-radius:20px}
-.tabs{display:flex;padding:8px 16px;gap:6px;position:sticky;top:56px;background:var(--sbg);z-index:99;border-bottom:1px solid rgba(255,255,255,.06)}
-.tab{padding:8px 16px;border-radius:20px;border:none;background:transparent;color:var(--hc);font-size:13px;cursor:pointer;transition:all .2s}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--tc);min-height:100vh;min-height:100dvh;padding-bottom:80px;overflow-x:hidden}
+.header{padding:12px 16px 10px;position:sticky;top:0;background:var(--sbg);z-index:100;border-bottom:1px solid rgba(255,255,255,.06)}
+.header h1{font-size:18px;font-weight:700}
+.header .stats{display:flex;gap:8px;margin-top:6px;font-size:11px;color:var(--hc);flex-wrap:wrap}
+.header .stats span{background:rgba(91,127,255,.15);padding:2px 8px;border-radius:12px;white-space:nowrap}
+.tabs{display:flex;padding:6px 12px;gap:4px;position:sticky;top:0;background:var(--sbg);z-index:99;border-bottom:1px solid rgba(255,255,255,.06)}
+.tab{padding:7px 14px;border-radius:18px;border:none;background:transparent;color:var(--hc);font-size:13px;cursor:pointer;transition:all .2s;white-space:nowrap}
 .tab.active{background:var(--bc);color:var(--btc)}
-.content{padding:12px 16px}
+.content{padding:10px 12px}
 .panel{display:none}
 .panel.active{display:block}
-.card{background:var(--sbg);border-radius:12px;padding:14px 16px;margin-bottom:8px;position:relative;transition:transform .15s}
-.card:active{transform:scale(.98)}
-.card-top{display:flex;align-items:center;gap:8px;margin-bottom:4px}
-.card-id{font-size:12px;color:var(--hc);font-weight:600}
-.card-type{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600}
+.card{background:var(--sbg);border-radius:10px;padding:12px 14px 12px 12px;margin-bottom:8px;position:relative}
+.card-top{display:flex;align-items:center;gap:6px;margin-bottom:2px}
+.card-id{font-size:11px;color:var(--hc);font-weight:600}
+.card-type{font-size:9px;padding:2px 6px;border-radius:8px;font-weight:600}
 .card-type.once{background:rgba(91,127,255,.2);color:#5b7fff}
 .card-type.cyclic{background:rgba(255,165,2,.2);color:#ffa502}
-.card-text{font-size:15px;line-height:1.4;margin-bottom:6px;word-break:break-word;padding-right:36px}
-.card-meta{font-size:12px;color:var(--hc);display:flex;gap:10px;flex-wrap:wrap}
-.card-del{position:absolute;top:12px;right:12px;background:rgba(255,71,87,.15);border:none;color:var(--bd);width:28px;height:28px;border-radius:50%;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .2s}
-.card-del:hover{opacity:.7}
-.msg-card{background:var(--sbg);border-radius:12px;padding:12px 16px;margin-bottom:8px}
-.msg-tag{font-size:12px;color:var(--bc);font-weight:600;margin-bottom:4px}
+.card-text{font-size:14px;line-height:1.35;margin-bottom:4px;word-break:break-word;padding-right:32px}
+.card-meta{font-size:11px;color:var(--hc);display:flex;gap:8px;flex-wrap:wrap}
+.card-del{position:absolute;top:10px;right:10px;background:rgba(255,71,87,.15);border:none;color:var(--bd);width:26px;height:26px;border-radius:50%;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .2s}
+.card-del:active{opacity:.5}
+.msg-card{background:var(--sbg);border-radius:10px;padding:10px 14px;margin-bottom:8px}
+.msg-tag{font-size:11px;color:var(--bc);font-weight:600;margin-bottom:3px}
 .msg-tag.owner{color:var(--suc)}
-.msg-text{font-size:14px;line-height:1.4;word-break:break-word}
-.msg-time{font-size:11px;color:var(--hc);margin-top:4px}
-.fab{position:fixed;bottom:24px;right:20px;width:56px;height:56px;border-radius:50%;background:var(--bc);color:var(--btc);border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 16px rgba(91,127,255,.4);z-index:200;transition:transform .2s}
+.msg-text{font-size:13px;line-height:1.35;word-break:break-word}
+.msg-time{font-size:10px;color:var(--hc);margin-top:3px}
+.fab{position:fixed;bottom:20px;right:16px;width:52px;height:52px;border-radius:50%;background:var(--bc);color:var(--btc);border:none;font-size:26px;cursor:pointer;box-shadow:0 4px 14px rgba(91,127,255,.4);z-index:200;line-height:1}
 .fab:active{transform:scale(.9)}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:flex-end;justify-content:center}
 .modal-overlay.show{display:flex}
-.modal{background:var(--sbg);border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px;animation:slideUp .25s ease;max-height:90vh;overflow-y:auto}
+.modal{background:var(--sbg);border-radius:16px 16px 0 0;padding:20px 16px 28px;width:100%;max-width:480px;animation:slideUp .2s ease;max-height:85vh;max-height:85dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.modal h3{font-size:18px;margin-bottom:16px}
-.modal label{display:block;font-size:13px;color:var(--hc);margin-bottom:6px;margin-top:12px}
-.modal input[type=text],.modal input[type=number],.modal input[type=date],.modal input[type=time]{width:100%;padding:12px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:var(--bg);color:var(--tc);font-size:15px;outline:none}
+.modal h3{font-size:16px;margin-bottom:12px}
+.modal label{display:block;font-size:12px;color:var(--hc);margin-bottom:4px;margin-top:10px}
+.modal input[type=text],.modal input[type=number],.modal input[type=date],.modal input[type=time]{width:100%;padding:10px 12px;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:var(--bg);color:var(--tc);font-size:16px;-webkit-appearance:none;appearance:none;outline:none}
 .modal input:focus{border-color:var(--bc)}
-input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-calendar-picker-indicator{filter:invert(1)}
-.mode-switch{display:flex;gap:6px;margin-bottom:14px}
-.mode-btn{flex:1;padding:10px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:transparent;color:var(--hc);font-size:13px;cursor:pointer;text-align:center;transition:all .2s}
+input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-calendar-picker-indicator{filter:invert(1);cursor:pointer}
+.mode-switch{display:flex;gap:4px;margin-bottom:10px;margin-top:10px}
+.mode-btn{flex:1;padding:9px 6px;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:transparent;color:var(--hc);font-size:12px;cursor:pointer;text-align:center;transition:all .2s}
 .mode-btn.active{background:var(--bc);color:var(--btc);border-color:var(--bc)}
-.time-row{display:flex;gap:8px}
-.time-row input{flex:1}
-.dur-row{display:flex;gap:6px;align-items:center}
-.dur-row input{width:60px;text-align:center;flex:none}
-.dur-row span{font-size:12px;color:var(--hc);flex:none}
-.freq-section{margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.06)}
-.check-row{display:flex;align-items:center;gap:10px;margin-top:14px}
-.check-row input[type=checkbox]{width:20px;height:20px;accent-color:var(--bc)}
-.check-row label{margin:0;font-size:14px;color:var(--tc)}
-.modal-btns{display:flex;gap:10px;margin-top:20px}
-.modal-btns button{flex:1;padding:13px;border:none;border-radius:10px;font-size:15px;cursor:pointer;transition:opacity .2s}
+.dur-row{display:flex;gap:4px;align-items:center;justify-content:center}
+.dur-group{display:flex;align-items:center;gap:2px}
+.dur-group input{width:48px;text-align:center;padding:8px 4px;font-size:16px}
+.dur-group span{font-size:11px;color:var(--hc);min-width:20px}
+.freq-section{margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06)}
+.check-row{display:flex;align-items:center;gap:8px;margin-top:10px;margin-bottom:6px}
+.check-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--bc);flex-shrink:0}
+.check-row label{margin:0;font-size:13px;color:var(--tc)}
+.modal-btns{display:flex;gap:8px;margin-top:16px}
+.modal-btns button{flex:1;padding:12px;border:none;border-radius:8px;font-size:14px;cursor:pointer;transition:opacity .2s}
 .modal-btns .btn-ok{background:var(--bc);color:var(--btc)}
 .modal-btns .btn-cancel{background:rgba(255,255,255,.08);color:var(--tc)}
-.btn-ok:hover,.btn-cancel:hover{opacity:.85}
-.danger-btn{background:rgba(255,71,87,.12);color:var(--bd);border:none;padding:10px 20px;border-radius:10px;font-size:13px;cursor:pointer;margin-top:12px;width:100%;transition:opacity .2s}
-.danger-btn:hover{opacity:.8}
-.empty{text-align:center;padding:40px 20px;color:var(--hc);font-size:14px}
+.btn-ok:active,.btn-cancel:active{opacity:.7}
+.danger-btn{background:rgba(255,71,87,.12);color:var(--bd);border:none;padding:10px;border-radius:8px;font-size:12px;cursor:pointer;margin-top:10px;width:100%}
+.danger-btn:active{opacity:.7}
+.empty{text-align:center;padding:32px 16px;color:var(--hc);font-size:13px}
 .confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;align-items:center;justify-content:center}
 .confirm-overlay.show{display:flex}
-.confirm-box{background:var(--sbg);border-radius:16px;padding:24px;text-align:center;max-width:300px;width:90%}
-.confirm-box p{margin-bottom:20px;font-size:15px}
-.confirm-box .btns{display:flex;gap:10px}
-.confirm-box .btns button{flex:1;padding:12px;border:none;border-radius:10px;font-size:14px;cursor:pointer}
+.confirm-box{background:var(--sbg);border-radius:14px;padding:20px;text-align:center;max-width:280px;width:90%}
+.confirm-box p{margin-bottom:16px;font-size:14px}
+.confirm-box .btns{display:flex;gap:8px}
+.confirm-box .btns button{flex:1;padding:10px;border:none;border-radius:8px;font-size:13px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -164,12 +163,9 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
       <div id="once-after" style="display:none">
         <label>Напомнить через</label>
         <div class="dur-row">
-          <input type="number" id="inp-aft-d" min="0" value="0" placeholder="0">
-          <span>дн</span>
-          <input type="number" id="inp-aft-h" min="0" max="23" value="0" placeholder="0">
-          <span>ч</span>
-          <input type="number" id="inp-aft-m" min="0" max="59" value="5" placeholder="5">
-          <span>мин</span>
+          <div class="dur-group"><input type="number" id="inp-aft-d" min="0" value="0" inputmode="numeric"><span>дн</span></div>
+          <div class="dur-group"><input type="number" id="inp-aft-h" min="0" max="23" value="0" inputmode="numeric"><span>ч</span></div>
+          <div class="dur-group"><input type="number" id="inp-aft-m" min="0" max="59" value="5" inputmode="numeric"><span>мин</span></div>
         </div>
       </div>
     </div>
@@ -183,12 +179,9 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
       <div class="freq-section">
         <label>Повторять каждые</label>
         <div class="dur-row">
-          <input type="number" id="inp-int-d" min="0" value="0" placeholder="0">
-          <span>дн</span>
-          <input type="number" id="inp-int-h" min="0" max="23" value="1" placeholder="1">
-          <span>ч</span>
-          <input type="number" id="inp-int-m" min="0" max="59" value="0" placeholder="0">
-          <span>мин</span>
+          <div class="dur-group"><input type="number" id="inp-int-d" min="0" value="0" inputmode="numeric"><span>дн</span></div>
+          <div class="dur-group"><input type="number" id="inp-int-h" min="0" max="23" value="1" inputmode="numeric"><span>ч</span></div>
+          <div class="dur-group"><input type="number" id="inp-int-m" min="0" max="59" value="0" inputmode="numeric"><span>мин</span></div>
         </div>
       </div>
     </div>
