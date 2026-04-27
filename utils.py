@@ -113,13 +113,35 @@ async def _fire_reminder(reminder_id: int, bot, scheduler):
     if not owner_id:
         logger.warning("Owner ID not found in DB")
         return
+
+    target_chat_id = reminder.get('target_chat_id') or owner_id
+    is_other = target_chat_id != owner_id
+
     prefix = "🔁 Цикличное напоминание" if reminder['is_cyclic'] else "🔔 Напоминание"
+    if is_other:
+        text_for_target = f"{prefix}:\n{reminder['text']}"
+        text_for_owner = f"✅ Напоминание доставлено: {reminder['text']}"
+    else:
+        text_for_target = f"{prefix}:\n{reminder['text']}"
+        text_for_owner = None
+
     try:
-        await bot.send_message(owner_id, f"{prefix}:\n{reminder['text']}")
-        logger.info("Reminder %s sent to %s", reminder_id, owner_id)
+        await bot.send_message(target_chat_id, text_for_target)
+        logger.info("Reminder %s sent to %s", reminder_id, target_chat_id)
     except Exception as e:
-        logger.error("Failed to send reminder %s: %s", reminder_id, e)
+        logger.error("Failed to send reminder %s to %s: %s", reminder_id, target_chat_id, e)
+        try:
+            await bot.send_message(owner_id, f"❌ Не удалось доставить напоминание пользователю: {e}")
+        except Exception:
+            pass
         return
+
+    if is_other and text_for_owner:
+        try:
+            await bot.send_message(owner_id, text_for_owner)
+        except Exception:
+            pass
+
     if reminder['is_cyclic']:
         next_time = datetime.now(tz) + timedelta(seconds=reminder['interval_seconds'])
         await db.update_remind_at(reminder_id, next_time.strftime("%Y-%m-%d %H:%M:%S"))

@@ -16,6 +16,7 @@ async def init_db():
                 is_cyclic INTEGER DEFAULT 0,
                 interval_seconds INTEGER,
                 is_active INTEGER DEFAULT 1,
+                target_chat_id INTEGER,
                 created_at TEXT DEFAULT (datetime('now'))
             );
             CREATE TABLE IF NOT EXISTS message_map (
@@ -36,8 +37,23 @@ async def init_db():
                 is_from_owner INTEGER DEFAULT 0,
                 created_at TEXT DEFAULT (datetime('now'))
             );
+            CREATE TABLE IF NOT EXISTS known_users (
+                user_id INTEGER PRIMARY KEY,
+                username TEXT NOT NULL,
+                first_name TEXT DEFAULT '',
+                updated_at TEXT DEFAULT (datetime('now'))
+            );
         """)
         await db.commit()
+
+
+async def migrate_db():
+    async with aiosqlite.connect(DB_PATH) as db:
+        try:
+            await db.execute("ALTER TABLE reminders ADD COLUMN target_chat_id INTEGER")
+            await db.commit()
+        except Exception:
+            pass
 
 
 async def set_owner(user_id: int, username: str):
@@ -56,11 +72,11 @@ async def get_owner_id() -> int | None:
             return row[0] if row else None
 
 
-async def add_reminder(text: str, remind_at: str, is_cyclic: bool = False, interval_seconds: int | None = None) -> int:
+async def add_reminder(text: str, remind_at: str, is_cyclic: bool = False, interval_seconds: int | None = None, target_chat_id: int | None = None) -> int:
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute(
-            "INSERT INTO reminders (text, remind_at, is_cyclic, interval_seconds) VALUES (?, ?, ?, ?)",
-            (text, remind_at, int(is_cyclic), interval_seconds),
+            "INSERT INTO reminders (text, remind_at, is_cyclic, interval_seconds, target_chat_id) VALUES (?, ?, ?, ?, ?)",
+            (text, remind_at, int(is_cyclic), interval_seconds, target_chat_id),
         )
         await db.commit()
         return cursor.lastrowid
@@ -140,6 +156,32 @@ async def get_all_reminders() -> list[dict]:
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         async with db.execute("SELECT * FROM reminders ORDER BY remind_at") as cursor:
+            rows = await cursor.fetchall()
+            return [dict(r) for r in rows]
+
+
+async def save_known_user(user_id: int, username: str, first_name: str = ""):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "INSERT OR REPLACE INTO known_users (user_id, username, first_name, updated_at) VALUES (?, ?, ?, datetime('now'))",
+            (user_id, username, first_name),
+        )
+        await db.commit()
+
+
+async def get_known_user_by_username(username: str) -> dict | None:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        clean = username.lower().lstrip("@")
+        async with db.execute("SELECT * FROM known_users WHERE LOWER(username) = ?", (clean,)) as cursor:
+            row = await cursor.fetchone()
+            return dict(row) if row else None
+
+
+async def get_all_known_users() -> list[dict]:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT * FROM known_users ORDER BY updated_at DESC") as cursor:
             rows = await cursor.fetchall()
             return [dict(r) for r in rows]
 

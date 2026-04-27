@@ -121,6 +121,8 @@ async def index(request: Request):
         "cyclic_count": cyclic_count,
         "msg_count": msg_count,
         "owner_username": config.OWNER_USERNAME,
+        "owner_id": config.OWNER_ID or 0,
+        "known_users": await db.get_all_known_users(),
     })
 
 
@@ -147,7 +149,16 @@ async def add_reminder(request: Request, text: str = Form(...)):
 
     form = await request.form()
     mode = form.get("mode", "exact")
+    target_username = (form.get("target_username") or "").strip().lstrip("@")
     now = datetime.now(utils.tz)
+
+    target_chat_id = None
+    if target_username:
+        known = await db.get_known_user_by_username(target_username)
+        if known:
+            target_chat_id = known['user_id']
+        else:
+            return RedirectResponse(url="/", status_code=303)
 
     remind_at = None
     interval_seconds = None
@@ -159,8 +170,7 @@ async def add_reminder(request: Request, text: str = Form(...)):
             return RedirectResponse(url="/", status_code=303)
 
         try:
-            local_tz = utils.tz
-            remind_at = local_tz.localize(datetime.strptime(f"{date_val} {time_val}", "%Y-%m-%d %H:%M"))
+            remind_at = utils.tz.localize(datetime.strptime(f"{date_val} {time_val}", "%Y-%m-%d %H:%M"))
         except ValueError:
             return RedirectResponse(url="/", status_code=303)
 
@@ -175,7 +185,7 @@ async def add_reminder(request: Request, text: str = Form(...)):
             remind_at = now + timedelta(seconds=interval_seconds)
 
         remind_at_str = remind_at.strftime("%Y-%m-%d %H:%M:%S")
-        reminder_id = await db.add_reminder(text, remind_at_str, is_cyclic=True, interval_seconds=interval_seconds)
+        reminder_id = await db.add_reminder(text, remind_at_str, is_cyclic=True, interval_seconds=interval_seconds, target_chat_id=target_chat_id)
 
     elif mode == "after":
         a_d = int(form.get("after_days", 0) or 0)
@@ -186,7 +196,7 @@ async def add_reminder(request: Request, text: str = Form(...)):
 
         remind_at = now + timedelta(days=a_d, hours=a_h, minutes=a_m)
         remind_at_str = remind_at.strftime("%Y-%m-%d %H:%M:%S")
-        reminder_id = await db.add_reminder(text, remind_at_str)
+        reminder_id = await db.add_reminder(text, remind_at_str, target_chat_id=target_chat_id)
 
     else:
         date_val = form.get("date", "")
@@ -203,12 +213,21 @@ async def add_reminder(request: Request, text: str = Form(...)):
             return RedirectResponse(url="/", status_code=303)
 
         remind_at_str = remind_at.strftime("%Y-%m-%d %H:%M:%S")
-        reminder_id = await db.add_reminder(text, remind_at_str)
+        reminder_id = await db.add_reminder(text, remind_at_str, target_chat_id=target_chat_id)
 
     if bot_instance and remind_at:
         utils.schedule_reminder(reminder_id, remind_at, bot_instance, _scheduler)
 
     return RedirectResponse(url="/", status_code=303)
+
+
+@app.get("/api/known-users")
+async def api_known_users(request: Request):
+    if not check_auth(request):
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=403, content={})
+    users = await db.get_all_known_users()
+    return [{"user_id": u["user_id"], "username": u["username"], "first_name": u["first_name"]} for u in users]
 
 
 @app.post("/reminders/delete/{reminder_id}")

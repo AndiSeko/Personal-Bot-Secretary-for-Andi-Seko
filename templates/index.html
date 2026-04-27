@@ -35,30 +35,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .msg-tag.owner{color:var(--suc)}
 .msg-text{font-size:13px;line-height:1.35;word-break:break-word}
 .msg-time{font-size:10px;color:var(--hc);margin-top:3px}
-.fab{position:fixed;bottom:20px;right:16px;width:52px;height:52px;border-radius:50%;background:var(--bc);color:var(--btc);border:none;font-size:26px;cursor:pointer;box-shadow:0 4px 14px rgba(91,127,255,.4);z-index:200;line-height:1}
 .fab:active{transform:scale(.9)}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:flex-end;justify-content:center}
 .modal-overlay.show{display:flex}
-.modal{background:var(--sbg);border-radius:16px 16px 0 0;padding:20px 16px 28px;width:100%;max-width:480px;animation:slideUp .2s ease;max-height:85vh;max-height:85dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
-@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.modal h3{font-size:16px;margin-bottom:12px}
-.modal label{display:block;font-size:12px;color:var(--hc);margin-bottom:4px;margin-top:10px}
-.modal input[type=text],.modal input[type=number],.modal input[type=date],.modal input[type=time]{width:100%;padding:10px 12px;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:var(--bg);color:var(--tc);font-size:16px;-webkit-appearance:none;appearance:none;outline:none}
+.modal{background:var(--sbg);border-radius:16px 16px 0 0;padding:20px 14px 32px;width:100%;max-width:480px;animation:slideUp .2s ease;max-height:90vh;max-height:90dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(32px + env(safe-area-inset-bottom,0px))}
+.modal h3{font-size:17px;margin-bottom:10px}
+.modal label{display:block;font-size:12px;color:var(--hc);margin-bottom:4px;margin-top:8px}
+.modal input[type=text],.modal input[type=number],.modal input[type=date],.modal input[type=time]{width:100%;padding:10px 12px;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:var(--bg);color:var(--tc);font-size:16px;-webkit-appearance:none;appearance:none;outline:none;min-height:44px}
 .modal input:focus{border-color:var(--bc)}
 input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-calendar-picker-indicator{filter:invert(1);cursor:pointer}
-.mode-switch{display:flex;gap:4px;margin-bottom:10px;margin-top:10px}
-.mode-btn{flex:1;padding:9px 6px;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:transparent;color:var(--hc);font-size:12px;cursor:pointer;text-align:center;transition:all .2s}
+.mode-switch{display:flex;gap:4px;margin:8px 0}
+.mode-btn{flex:1;padding:10px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:transparent;color:var(--hc);font-size:12px;cursor:pointer;text-align:center;transition:all .2s;min-height:42px;display:flex;align-items:center;justify-content:center}
 .mode-btn.active{background:var(--bc);color:var(--btc);border-color:var(--bc)}
-.dur-row{display:flex;gap:4px;align-items:center;justify-content:center}
+.dur-row{display:flex;gap:4px;align-items:center;justify-content:center;flex-wrap:wrap}
 .dur-group{display:flex;align-items:center;gap:2px}
-.dur-group input{width:48px;text-align:center;padding:8px 4px;font-size:16px}
-.dur-group span{font-size:11px;color:var(--hc);min-width:20px}
-.freq-section{margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06)}
-.check-row{display:flex;align-items:center;gap:8px;margin-top:10px;margin-bottom:6px}
-.check-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--bc);flex-shrink:0}
-.check-row label{margin:0;font-size:13px;color:var(--tc)}
-.modal-btns{display:flex;gap:8px;margin-top:16px}
-.modal-btns button{flex:1;padding:12px;border:none;border-radius:8px;font-size:14px;cursor:pointer;transition:opacity .2s}
+.dur-group input{width:52px;text-align:center;padding:10px 4px;font-size:16px;min-width:0}
+.dur-group span{font-size:12px;color:var(--hc);min-width:22px}
+.freq-section{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.06)}
+.check-row{display:flex;align-items:center;gap:8px;margin-top:8px;margin-bottom:4px}
+.check-row input[type=checkbox]{width:20px;height:20px;accent-color:var(--bc);flex-shrink:0}
+.check-row label{margin:0;font-size:14px;color:var(--tc);-webkit-user-select:none;user-select:none}
+.modal-btns{display:flex;gap:8px;margin-top:16px;padding-bottom:env(safe-area-inset-bottom,0px)}
+.modal-btns button{flex:1;padding:13px;border:none;border-radius:10px;font-size:15px;cursor:pointer;min-height:46px}
 .modal-btns .btn-ok{background:var(--bc);color:var(--btc)}
 .modal-btns .btn-cancel{background:rgba(255,255,255,.08);color:var(--tc)}
 .btn-ok:active,.btn-cancel:active{opacity:.7}
@@ -71,6 +69,15 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .confirm-box p{margin-bottom:16px;font-size:14px}
 .confirm-box .btns{display:flex;gap:8px}
 .confirm-box .btns button{flex:1;padding:10px;border:none;border-radius:8px;font-size:13px;cursor:pointer}
+.target-section{margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.06)}
+.target-row{position:relative}
+.target-row input{padding-right:32px}
+.target-suggestions{position:absolute;left:0;right:0;top:100%;background:var(--sbg);border:1px solid rgba(255,255,255,.1);border-radius:8px;margin-top:2px;max-height:120px;overflow-y:auto;-webkit-overflow-scrolling:touch;z-index:10;display:none;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.target-suggestions.show{display:block}
+.target-suggestions div{padding:10px 12px;font-size:14px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-tap-highlight-color:transparent}
+.target-suggestions div:active{background:rgba(91,127,255,.25)}
+.card-target{font-size:11px;color:var(--bc);margin-bottom:2px}
+.fab{position:fixed;right:16px;width:52px;height:52px;border-radius:50%;background:var(--bc);color:var(--btc);border:none;font-size:26px;cursor:pointer;box-shadow:0 4px 14px rgba(91,127,255,.4);z-index:200;line-height:1;bottom:calc(20px + env(safe-area-inset-bottom,0px))}
 </style>
 </head>
 <body>
@@ -102,6 +109,9 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
             <span class="card-type once">Разовое</span>
           {% endif %}
         </div>
+        {% if r.target_chat_id and r.target_chat_id != owner_id %}
+        <div class="card-target">→ пользователю</div>
+        {% endif %}
         <div class="card-text">{{r.text}}</div>
         <div class="card-meta">
           <span>{{r.remind_at_fmt}}</span>
@@ -145,6 +155,19 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
     <div class="check-row">
       <input type="checkbox" id="inp-cyclic" onchange="toggleCyclic()">
       <label for="inp-cyclic">Цикличное напоминание</label>
+    </div>
+
+    <div class="check-row">
+      <input type="checkbox" id="inp-for-other" onchange="toggleForOther()">
+      <label for="inp-for-other">Другому пользователю</label>
+    </div>
+
+    <div id="target-section" style="display:none">
+      <label>Тег пользователя</label>
+      <div class="target-row">
+        <input type="text" id="inp-target" placeholder="@username" autocomplete="off" oninput="onTargetInput()">
+        <div class="target-suggestions" id="target-suggestions"></div>
+      </div>
     </div>
 
     <div id="once-mode">
@@ -236,6 +259,9 @@ function closeModal(e){
     document.getElementById('modal-overlay').classList.remove('show');
     document.getElementById('inp-text').value='';
     document.getElementById('inp-cyclic').checked=false;
+    document.getElementById('inp-for-other').checked=false;
+    document.getElementById('target-section').style.display='none';
+    document.getElementById('inp-target').value='';
     document.getElementById('once-mode').style.display='';
     document.getElementById('cyclic-mode').style.display='none';
     setOnceMode('exact');
@@ -254,12 +280,46 @@ function toggleCyclic(){
   document.getElementById('cyclic-mode').style.display=on?'':'none';
 }
 
+function toggleForOther(){
+  const on=document.getElementById('inp-for-other').checked;
+  document.getElementById('target-section').style.display=on?'':'none';
+  if(!on){document.getElementById('inp-target').value='';hideTargetSuggestions()}
+}
+
+const knownUsers=[
+  {% for u in known_users %}
+  {username:"{{u.username}}",name:"{{u.first_name}}"}{% if not loop.last %},{% endif %}
+  {% endfor %}
+];
+
+function onTargetInput(){
+  const val=document.getElementById('inp-target').value.replace(/^@/,'').toLowerCase();
+  const box=document.getElementById('target-suggestions');
+  if(!val){hideTargetSuggestions();return}
+  const matches=knownUsers.filter(u=>u.username.toLowerCase().includes(val));
+  if(!matches.length){hideTargetSuggestions();return}
+  box.innerHTML=matches.map(u=>`<div onclick="selectTarget('${u.username}')">@${u.username}${u.name?' ('+u.name+')':''}</div>`).join('');
+  box.classList.add('show');
+}
+
+function selectTarget(username){
+  document.getElementById('inp-target').value='@'+username;
+  hideTargetSuggestions();
+}
+
+function hideTargetSuggestions(){
+  document.getElementById('target-suggestions').classList.remove('show');
+}
+
 async function addReminder(){
   const text=document.getElementById('inp-text').value.trim();
   if(!text)return;
   const cyclic=document.getElementById('inp-cyclic').checked;
+  const forOther=document.getElementById('inp-for-other').checked;
+  const targetUsername=forOther?document.getElementById('inp-target').value.trim():'';
   const fd=new FormData();
   fd.append('text',text);
+  if(targetUsername)fd.append('target_username',targetUsername);
 
   if(cyclic){
     const d=document.getElementById('inp-c-date').value;

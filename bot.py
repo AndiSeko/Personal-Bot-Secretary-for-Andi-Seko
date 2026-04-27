@@ -252,6 +252,8 @@ async def forward_text_to_owner(message: Message, bot: Bot):
     user = message.from_user
     tag = f"@{user.username}" if user.username else user.first_name
 
+    await db.save_known_user(user.id, user.username or "", user.first_name or "")
+
     try:
         sent = await bot.send_message(config.OWNER_ID, f"[{tag}]: {message.text}")
         await db.save_message_map(sent.message_id, user.id)
@@ -270,6 +272,8 @@ async def forward_photo_to_owner(message: Message, bot: Bot):
     user = message.from_user
     tag = f"@{user.username}" if user.username else user.first_name
     caption = f"[{tag}]: {message.caption}" if message.caption else f"[{tag}]: 📷 Фото"
+
+    await db.save_known_user(user.id, user.username or "", user.first_name or "")
 
     try:
         sent = await bot.send_photo(
@@ -318,6 +322,7 @@ async def reply_photo_to_user(message: Message, bot: Bot):
 
 async def on_startup(bot: Bot):
     await db.init_db()
+    await db.migrate_db()
 
     from aiogram.types import BotCommand, BotCommandScopeChat, BotCommandScopeAllPrivateChats
 
