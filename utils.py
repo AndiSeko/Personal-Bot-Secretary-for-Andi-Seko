@@ -1,9 +1,13 @@
 import re
+import asyncio
+import logging
 from datetime import datetime, timedelta
 
 import pytz
 
 import config
+
+logger = logging.getLogger(__name__)
 
 tz = pytz.timezone(config.TIMEZONE)
 
@@ -83,12 +87,19 @@ def format_interval(seconds: int) -> str:
 
 def schedule_reminder(reminder_id: int, remind_at: datetime, bot, scheduler):
     from apscheduler.triggers.date import DateTrigger
+    loop = asyncio.get_event_loop()
     scheduler.add_job(
-        _fire_reminder,
+        _fire_reminder_sync,
         trigger=DateTrigger(run_date=remind_at),
         id=f"reminder_{reminder_id}",
         replace_existing=True,
-        args=[reminder_id, bot, scheduler],
+        args=[reminder_id, bot, scheduler, loop],
+    )
+
+
+def _fire_reminder_sync(reminder_id: int, bot, scheduler, loop):
+    asyncio.run_coroutine_threadsafe(
+        _fire_reminder(reminder_id, bot, scheduler), loop
     )
 
 
@@ -96,14 +107,18 @@ async def _fire_reminder(reminder_id: int, bot, scheduler):
     import db
     reminder = await db.get_reminder_by_id(reminder_id)
     if not reminder:
+        logger.warning("Reminder %s not found in DB", reminder_id)
         return
     owner_id = await db.get_owner_id()
     if not owner_id:
+        logger.warning("Owner ID not found in DB")
         return
     prefix = "🔁 Цикличное напоминание" if reminder['is_cyclic'] else "🔔 Напоминание"
     try:
         await bot.send_message(owner_id, f"{prefix}:\n{reminder['text']}")
-    except Exception:
+        logger.info("Reminder %s sent to %s", reminder_id, owner_id)
+    except Exception as e:
+        logger.error("Failed to send reminder %s: %s", reminder_id, e)
         return
     if reminder['is_cyclic']:
         next_time = datetime.now(tz) + timedelta(seconds=reminder['interval_seconds'])
