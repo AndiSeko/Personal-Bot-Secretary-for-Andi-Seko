@@ -1,3 +1,4 @@
+import os
 import aiosqlite
 from datetime import datetime
 import config
@@ -7,6 +8,9 @@ DB_PATH += "secretary.db"
 
 
 async def init_db():
+    db_dir = os.path.dirname(DB_PATH)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
     async with aiosqlite.connect(DB_PATH) as db:
         await db.executescript("""
             CREATE TABLE IF NOT EXISTS reminders (
