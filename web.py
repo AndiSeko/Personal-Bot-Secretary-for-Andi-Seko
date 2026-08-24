@@ -15,7 +15,7 @@ import db
 import config
 import utils
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 WEB_PASSWORD = os.getenv("WEB_PASSWORD", "secretary")
 
@@ -242,6 +242,20 @@ async def delete_reminder(request: Request, reminder_id: int):
 
     await db.delete_reminder(reminder_id)
     return RedirectResponse(url="/", status_code=303)
+
+
+@app.get("/health")
+async def health():
+    """Liveness probe для UptimeRobot / Koyeb / Render — не требует авторизации."""
+    from fastapi.responses import JSONResponse
+    return JSONResponse({"status": "ok", "scheduler_running": bool(_scheduler and _scheduler.running)})
+
+
+@app.get("/ping")
+async def ping():
+    """То же что /health, короткое имя для внешних пингеров."""
+    from fastapi.responses import JSONResponse
+    return JSONResponse({"status": "ok"})
 
 
 @app.post("/reminders/deleteall")

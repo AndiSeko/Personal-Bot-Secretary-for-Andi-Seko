@@ -1,0 +1,28 @@
+# Для локального запуска или для Oracle Cloud / любого VPS с Docker
+# Использование:
+#   cp .env.example .env  # заполни токены
+#   docker compose up -d
+# Данные сохраняются в ./data/secretary.db (на Oracle — в Docker volume)
+services:
+  bot:
+    build: .
+    container_name: secretary-bot
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      # Переопредели если нужно
+      - DATA_DIR=/data
+      - PORT=8000
+    volumes:
+      - secretary_data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  secretary_data:

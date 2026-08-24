@@ -1,0 +1,44 @@
+app = "personal-secretary-andi"
+primary_region = "waw"  # Warsaw — ближе к Москве/Европе; поменяй на ams/fra если нужно
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8000"
+  DATA_DIR = "/data"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [[http_service.checks]]
+    grace_period = "15s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    timeout = "5s"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512
+
+# Persistent volume — данные не пропадут после деплоя/рестарта
+[[mounts]]
+  source = "secretary_data"
+  destination = "/data"
+
+# Создай volume перед первым деплоем:
+#   fly volumes create secretary_data --region waw --size 1
+# Деплой:
+#   fly deploy
+# Переменные окружения:
+#   fly secrets set BOT_TOKEN=... OWNER_ID=... WEB_PASSWORD=... GROQ_API_KEY=...
+# Если хочешь Postgres вместо volume:
+#   fly postgres create  (или внешний Neon) и затем:
+#   fly secrets set DATABASE_URL=postgresql://...
