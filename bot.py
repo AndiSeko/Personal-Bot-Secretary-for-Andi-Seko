@@ -355,7 +355,7 @@ async def on_startup(bot: Bot):
                 BotCommand(command="clearai", description="Очистить контекст AI"),
                 BotCommand(command="app", description="Веб-кабинет"),
             ],
-            scope=BotCommandScopeChat(chat_id=owner_id),
+            scope=BotCommandScopeChat(chat_id=config.OWNER_ID),
         )
 
     await load_reminders(bot)
