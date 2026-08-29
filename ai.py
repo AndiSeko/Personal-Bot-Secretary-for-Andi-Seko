@@ -50,9 +50,36 @@ async def ask(user_message: str) -> str:
         return answer
     except Exception as e:
         err = str(e)
-        # Groq deprecates models часто — пробуем фолбэк
+        # Groq часто deprecates модели — пробуем фолбэки + авто-список доступных
         if "model_not_found" in err or "does not exist" in err or "model_" in err:
-            for fallback in ["llama-3.1-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it"]:
+            # 1) сначала пробуем запросить список доступных моделей
+            try:
+                models = client.models.list()
+                available = [m.id for m in models.data]
+                logger.warning("Model %s not found, available: %s", config.AI_MODEL, available)
+                for m in available:
+                    if m == config.AI_MODEL:
+                        continue
+                    try:
+                        logger.warning("Trying available model %s", m)
+                        response = client.chat.completions.create(
+                            model=m,
+                            messages=[
+                                {"role": "system", "content": SYSTEM_PROMPT},
+                                *_conversation_history,
+                            ],
+                            temperature=0.7,
+                            max_tokens=1024,
+                        )
+                        answer = response.choices[0].message.content
+                        _conversation_history.append({"role": "assistant", "content": answer})
+                        return answer
+                    except Exception:
+                        continue
+            except Exception as le:
+                logger.warning("Failed to list Groq models: %s", le)
+            # 2) хардкод фолбэки на случай если list не сработал
+            for fallback in ["llama3-8b-8192", "llama3-70b-8192", "llama-3.1-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it", "meta-llama/llama-4-scout-17b-16e-instruct", "openai/gpt-oss-20b"]:
                 if fallback == config.AI_MODEL:
                     continue
                 try:
@@ -73,7 +100,7 @@ async def ask(user_message: str) -> str:
                     continue
         logger.error("Groq API error: %s", e)
         _conversation_history.pop()
-        return f"Ошибка AI: {e}"
+        return f"Ошибка AI: {e}. Проверь https://console.groq.com/docs/models и задай рабочий AI_MODEL в Environment."
 
 
 def clear_history():
