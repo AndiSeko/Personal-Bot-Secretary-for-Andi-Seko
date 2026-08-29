@@ -36,6 +36,46 @@ def is_available() -> bool:
     return client is not None
 
 
+async def ask_stream(user_message: str):
+    """Yield chunks для стриминга как в OpenClaw — постепенная печать."""
+    if not client:
+        yield "AI-ассистент не настроен. Добавьте GROQ_API_KEY в .env"
+        return
+
+    _conversation_history.append({"role": "user", "content": user_message})
+    if len(_conversation_history) > 20:
+        del _conversation_history[:len(_conversation_history) - 20]
+
+    full = ""
+    try:
+        # пробуем стриминг, синхронный итератор Groq — оборачиваем в thread
+        import asyncio
+        stream = client.chat.completions.create(
+            model=config.AI_MODEL,
+            messages=[{"role": "system", "content": SYSTEM_PROMPT}, *_conversation_history],
+            temperature=0.7,
+            max_tokens=1024,
+            stream=True,
+        )
+        for chunk in stream:
+            delta = chunk.choices[0].delta.content or ""
+            if delta:
+                full += delta
+                yield delta
+        _conversation_history.append({"role": "assistant", "content": full})
+    except Exception as e:
+        err = str(e)
+        if "model_not_found" in err or "does not exist" in err:
+            # fallback через обычный ask без стрима
+            _conversation_history.pop()
+            ans = await ask(user_message)
+            yield ans
+            return
+        logger.error("Groq stream error: %s", e)
+        _conversation_history.pop()
+        yield f"Ошибка AI: {e}"
+
+
 async def ask(user_message: str) -> str:
     if not client:
         return "AI-ассистент не настроен. Добавьте GROQ_API_KEY в .env"

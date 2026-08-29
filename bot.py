@@ -120,15 +120,40 @@ async def owner_text_to_ai(message: Message):
     if not ai.is_available():
         return
     msg = await message.answer("🤔 Думаю...")
-    answer = await ai.ask(message.text)
-    # HTML для Telegram: <b>, <i>, <tg-spoiler>, <code> — рендерит спойлер ||...||
+    # Стриминг как в OpenClaw: постепенная печать с курсором ▌
+    import time
     from aiogram.enums import ParseMode
+    full = ""
+    last_edit = 0
+    cursor = " ▌"
     try:
-        await msg.edit_text(answer, parse_mode=ParseMode.HTML)
+        async for chunk in ai.ask_stream(message.text):
+            full += chunk
+            now = time.time()
+            # троттлинг 0.5с чтобы не словить FloodWait
+            if now - last_edit < 0.5:
+                continue
+            last_edit = now
+            # во время стрима шлём без HTML чтобы не ломать незакрытые теги
+            try:
+                await msg.edit_text(full + cursor)
+            except Exception:
+                pass
+            await asyncio.sleep(0.05)
+    except Exception as e:
+        logger.error("AI stream failed: %s", e)
+        # fallback на обычный ask
+        full = await ai.ask(message.text)
+
+    # финальный рендер с HTML (спойлеры, жирный, etc.)
+    # убираем курсор и рендерим красиво
+    if not full:
+        full = await ai.ask(message.text)
+    try:
+        await msg.edit_text(full, parse_mode=ParseMode.HTML)
     except Exception:
-        # fallback без форматирования если AI вернул кривой HTML
         try:
-            await msg.edit_text(answer)
+            await msg.edit_text(full)
         except Exception:
             pass
 
