@@ -48,8 +48,6 @@ async def ask_stream(user_message: str):
 
     full = ""
     try:
-        # пробуем стриминг, синхронный итератор Groq — оборачиваем в thread
-        import asyncio
         stream = client.chat.completions.create(
             model=config.AI_MODEL,
             messages=[{"role": "system", "content": SYSTEM_PROMPT}, *_conversation_history],
@@ -64,9 +62,8 @@ async def ask_stream(user_message: str):
                 yield delta
         _conversation_history.append({"role": "assistant", "content": full})
     except Exception as e:
-        err = str(e)
-        if "model_not_found" in err or "does not exist" in err:
-            # fallback через обычный ask без стрима
+        err = str(e).lower()
+        if any(x in err for x in ["model_not_found", "does not exist", "decommissioned", "unsupported", "not found"]):
             _conversation_history.pop()
             ans = await ask(user_message)
             yield ans
@@ -99,9 +96,9 @@ async def ask(user_message: str) -> str:
         _conversation_history.append({"role": "assistant", "content": answer})
         return answer
     except Exception as e:
-        err = str(e)
+        err = str(e).lower()
         # Groq часто deprecates модели — пробуем фолбэки + авто-список доступных
-        if "model_not_found" in err or "does not exist" in err or "model_" in err:
+        if any(x in err for x in ["model_not_found", "does not exist", "decommissioned", "unsupported", "not found", "model_"]):
             # 1) сначала пробуем запросить список доступных моделей
             try:
                 models = client.models.list()
@@ -128,8 +125,8 @@ async def ask(user_message: str) -> str:
                         continue
             except Exception as le:
                 logger.warning("Failed to list Groq models: %s", le)
-            # 2) хардкод фолбэки на случай если list не сработал
-            for fallback in ["llama3-8b-8192", "llama3-70b-8192", "llama-3.1-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it", "meta-llama/llama-4-scout-17b-16e-instruct", "openai/gpt-oss-20b"]:
+            # 2) хардкод фолбэки на случай если list не сработал (актуально на 29.08.2026: openai/gpt-oss-20b / 120b)
+            for fallback in ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3-32b", "meta-llama/llama-4-scout-17b-16e-instruct", "llama-3.1-8b-instant", "llama-3.3-70b-versatile"]:
                 if fallback == config.AI_MODEL:
                     continue
                 try:
