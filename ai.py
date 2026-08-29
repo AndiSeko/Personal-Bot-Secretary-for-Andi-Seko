@@ -49,6 +49,28 @@ async def ask(user_message: str) -> str:
         _conversation_history.append({"role": "assistant", "content": answer})
         return answer
     except Exception as e:
+        err = str(e)
+        # Groq deprecates models часто — пробуем фолбэк
+        if "model_not_found" in err or "does not exist" in err or "model_" in err:
+            for fallback in ["llama-3.1-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it"]:
+                if fallback == config.AI_MODEL:
+                    continue
+                try:
+                    logger.warning("Model %s not found, trying fallback %s", config.AI_MODEL, fallback)
+                    response = client.chat.completions.create(
+                        model=fallback,
+                        messages=[
+                            {"role": "system", "content": SYSTEM_PROMPT},
+                            *_conversation_history,
+                        ],
+                        temperature=0.7,
+                        max_tokens=1024,
+                    )
+                    answer = response.choices[0].message.content
+                    _conversation_history.append({"role": "assistant", "content": answer})
+                    return answer
+                except Exception:
+                    continue
         logger.error("Groq API error: %s", e)
         _conversation_history.pop()
         return f"Ошибка AI: {e}"

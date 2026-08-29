@@ -15,7 +15,7 @@ WEB_URL = os.getenv("WEB_URL", "").rstrip("/")
 WEB_PORT = int(os.getenv("PORT", os.getenv("WEB_PORT", "8000")))
 WEB_PASSWORD = os.getenv("WEB_PASSWORD", "secretary")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-AI_MODEL = os.getenv("AI_MODEL", "llama-3.3-70b-versatile")
+AI_MODEL = os.getenv("AI_MODEL", "llama-3.1-8b-instant")
 DATA_DIR = os.getenv("DATA_DIR", "")
 
 # ── Database ──
