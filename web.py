@@ -103,22 +103,36 @@ async def index(request: Request):
     cyclic_count = sum(1 for r in reminders if r['is_cyclic'])
     msg_count = len(messages)
 
+    def _fmt_dt(s: str, out_fmt="%d.%m.%Y %H:%M"):
+        if not s:
+            return ""
+        # postgres now()::text = "2026-08-29 14:33:45.123+00" — режем до 19 символов
+        try:
+            return datetime.strptime(s[:19], "%Y-%m-%d %H:%M:%S").strftime(out_fmt)
+        except Exception:
+            try:
+                return datetime.fromisoformat(s.replace(" ", "T")).strftime(out_fmt)
+            except Exception:
+                return s[:16]
+
     for r in reminders:
-        dt = datetime.strptime(r['remind_at'], "%Y-%m-%d %H:%M:%S")
-        r['remind_at_fmt'] = dt.strftime("%d.%m.%Y %H:%M")
+        try:
+            dt = datetime.strptime(r['remind_at'][:19], "%Y-%m-%d %H:%M:%S")
+            r['remind_at_fmt'] = dt.strftime("%d.%m.%Y %H:%M")
+        except Exception:
+            r['remind_at_fmt'] = _fmt_dt(r.get('remind_at',''))
         if r['is_cyclic'] and r['interval_seconds']:
             r['interval_fmt'] = utils.format_interval(r['interval_seconds'])
         else:
             r['interval_fmt'] = ""
         # for calendar integration: extract date
         try:
-            r['ev_date'] = dt.strftime("%Y-%m-%d")
+            r['ev_date'] = datetime.strptime(r['remind_at'][:19], "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d")
         except:
             r['ev_date'] = ""
 
     for m in messages:
-        dt = datetime.strptime(m['created_at'], "%Y-%m-%d %H:%M:%S")
-        m['created_at_fmt'] = dt.strftime("%d.%m.%Y %H:%M")
+        m['created_at_fmt'] = _fmt_dt(m.get('created_at',''))
 
     for ev in calendar_events:
         try:
