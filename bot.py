@@ -121,7 +121,16 @@ async def owner_text_to_ai(message: Message):
         return
     msg = await message.answer("🤔 Думаю...")
     answer = await ai.ask(message.text)
-    await msg.edit_text(answer)
+    # HTML для Telegram: <b>, <i>, <tg-spoiler>, <code> — рендерит спойлер ||...||
+    from aiogram.enums import ParseMode
+    try:
+        await msg.edit_text(answer, parse_mode=ParseMode.HTML)
+    except Exception:
+        # fallback без форматирования если AI вернул кривой HTML
+        try:
+            await msg.edit_text(answer)
+        except Exception:
+            pass
 
 
 @router.message(IsOwner(), Command("remind"))
