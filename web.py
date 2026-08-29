@@ -6,7 +6,7 @@ import urllib.parse
 from pathlib import Path
 
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from aiogram import Bot
@@ -16,6 +16,7 @@ import config
 import utils
 
 from datetime import datetime, timedelta
+import json as _json
 
 WEB_PASSWORD = os.getenv("WEB_PASSWORD", "secretary")
 
@@ -96,6 +97,7 @@ async def index(request: Request):
 
     reminders = await db.get_all_reminders()
     messages = await db.get_messages(limit=50)
+    calendar_events = await db.get_all_calendar_events()
 
     active_count = len(reminders)
     cyclic_count = sum(1 for r in reminders if r['is_cyclic'])
@@ -108,21 +110,59 @@ async def index(request: Request):
             r['interval_fmt'] = utils.format_interval(r['interval_seconds'])
         else:
             r['interval_fmt'] = ""
+        # for calendar integration: extract date
+        try:
+            r['ev_date'] = dt.strftime("%Y-%m-%d")
+        except:
+            r['ev_date'] = ""
 
     for m in messages:
         dt = datetime.strptime(m['created_at'], "%Y-%m-%d %H:%M:%S")
         m['created_at_fmt'] = dt.strftime("%d.%m.%Y %H:%M")
 
+    for ev in calendar_events:
+        try:
+            dt = datetime.strptime(ev['remind_at'], "%Y-%m-%d %H:%M:%S")
+            ev['remind_at_fmt'] = dt.strftime("%d.%m.%Y %H:%M")
+        except:
+            ev['remind_at_fmt'] = ev.get('remind_at','')
+        # offset fmt
+        off = ev.get('remind_offset_minutes', 0) or 0
+        if off:
+            h = off // 60; mm = off % 60
+            if h and mm:
+                ev['offset_fmt'] = f"{h}ч {mm}м до"
+            elif h:
+                ev['offset_fmt'] = f"{h}ч до"
+            else:
+                ev['offset_fmt'] = f"{mm}м до"
+        else:
+            ev['offset_fmt'] = "в момент события"
+
+    # theme settings
+    theme_json = await db.get_setting("theme")
+    theme = None
+    if theme_json:
+        try:
+            theme = _json.loads(theme_json)
+        except:
+            theme = None
+
     return templates.TemplateResponse("index.html", {
         "request": request,
         "reminders": reminders,
         "messages": messages,
+        "calendar_events": calendar_events,
+        "calendar_events_json": _json.dumps(calendar_events, ensure_ascii=False),
+        "reminders_json": _json.dumps(reminders, ensure_ascii=False),
         "active_count": active_count,
         "cyclic_count": cyclic_count,
         "msg_count": msg_count,
+        "calendar_count": len(calendar_events),
         "owner_username": config.OWNER_USERNAME,
         "owner_id": config.OWNER_ID or 0,
         "known_users": await db.get_all_known_users(),
+        "theme_json": _json.dumps(theme) if theme else "null",
     })
 
 
@@ -224,10 +264,145 @@ async def add_reminder(request: Request, text: str = Form(...)):
 @app.get("/api/known-users")
 async def api_known_users(request: Request):
     if not check_auth(request):
-        from fastapi.responses import JSONResponse
         return JSONResponse(status_code=403, content={})
     users = await db.get_all_known_users()
     return [{"user_id": u["user_id"], "username": u["username"], "first_name": u["first_name"]} for u in users]
+
+
+# ─── Calendar API ───
+
+def _calc_calendar_remind_at(event_date: str, event_time: str, offset_minutes: int) -> datetime | None:
+    try:
+        dt = utils.tz.localize(datetime.strptime(f"{event_date} {event_time}", "%Y-%m-%d %H:%M"))
+        remind_at = dt - timedelta(minutes=offset_minutes)
+        return remind_at
+    except Exception:
+        return None
+
+@app.get("/api/calendar")
+async def api_calendar(request: Request):
+    if not check_auth(request):
+        return JSONResponse(status_code=403, content={"error":"forbidden"})
+    events = await db.get_all_calendar_events()
+    rems = await db.get_all_reminders()
+    return {"events": events, "reminders": rems}
+
+@app.post("/calendar/add")
+async def calendar_add(request: Request):
+    if not check_auth(request):
+        return RedirectResponse(url="/", status_code=303)
+    form = await request.form()
+    title = (form.get("title") or "").strip()
+    description = (form.get("description") or "").strip()
+    event_date = (form.get("event_date") or "").strip()
+    event_time = (form.get("event_time") or "").strip()
+    color = (form.get("color") or "#5b7fff").strip()
+    target_username = (form.get("target_username") or "").strip().lstrip("@")
+    off_h = int(form.get("offset_hours", 0) or 0)
+    off_m = int(form.get("offset_minutes", 0) or 0)
+    offset_minutes = off_h*60 + off_m
+
+    if not title or not event_date or not event_time:
+        return RedirectResponse(url="/", status_code=303)
+
+    remind_at_dt = _calc_calendar_remind_at(event_date, event_time, offset_minutes)
+    if not remind_at_dt:
+        return RedirectResponse(url="/", status_code=303)
+
+    target_chat_id = None
+    if target_username:
+        known = await db.get_known_user_by_username(target_username)
+        if known:
+            target_chat_id = known['user_id']
+
+    remind_at_str = remind_at_dt.strftime("%Y-%m-%d %H:%M:%S")
+    event_id = await db.add_calendar_event(title, description, event_date, event_time, offset_minutes, remind_at_str, color, target_chat_id)
+
+    # Only schedule if remind time is in future
+    if remind_at_dt > datetime.now(utils.tz) and bot_instance and _scheduler:
+        utils.schedule_calendar_event(event_id, remind_at_dt, bot_instance, _scheduler)
+
+    # support JSON API
+    if request.headers.get("accept","").find("json")>=0 or request.query_params.get("json")=="1":
+        return JSONResponse({"ok":True, "id": event_id})
+    return RedirectResponse(url="/", status_code=303)
+
+@app.post("/calendar/update/{event_id}")
+async def calendar_update(request: Request, event_id: int):
+    if not check_auth(request):
+        return RedirectResponse(url="/", status_code=303)
+    form = await request.form()
+    title = (form.get("title") or "").strip()
+    description = (form.get("description") or "").strip()
+    event_date = (form.get("event_date") or "").strip()
+    event_time = (form.get("event_time") or "").strip()
+    color = (form.get("color") or "#5b7fff").strip()
+    target_username = (form.get("target_username") or "").strip().lstrip("@")
+    off_h = int(form.get("offset_hours", 0) or 0)
+    off_m = int(form.get("offset_minutes", 0) or 0)
+    offset_minutes = off_h*60 + off_m
+
+    if not title or not event_date or not event_time:
+        return RedirectResponse(url="/", status_code=303)
+
+    remind_at_dt = _calc_calendar_remind_at(event_date, event_time, offset_minutes)
+    if not remind_at_dt:
+        return RedirectResponse(url="/", status_code=303)
+
+    target_chat_id = None
+    if target_username:
+        known = await db.get_known_user_by_username(target_username)
+        if known:
+            target_chat_id = known['user_id']
+
+    remind_at_str = remind_at_dt.strftime("%Y-%m-%d %H:%M:%S")
+    await db.update_calendar_event(event_id, title, description, event_date, event_time, offset_minutes, remind_at_str, color, target_chat_id)
+
+    # reschedule
+    try:
+        _scheduler.remove_job(f"calendar_{event_id}")
+    except Exception:
+        pass
+    if remind_at_dt > datetime.now(utils.tz) and bot_instance and _scheduler:
+        utils.schedule_calendar_event(event_id, remind_at_dt, bot_instance, _scheduler)
+
+    if request.headers.get("accept","").find("json")>=0 or request.query_params.get("json")=="1":
+        return JSONResponse({"ok":True})
+    return RedirectResponse(url="/", status_code=303)
+
+@app.post("/calendar/delete/{event_id}")
+async def calendar_delete(request: Request, event_id: int):
+    if not check_auth(request):
+        return RedirectResponse(url="/", status_code=303)
+    try:
+        _scheduler.remove_job(f"calendar_{event_id}")
+    except Exception:
+        pass
+    await db.delete_calendar_event(event_id)
+    if request.headers.get("accept","").find("json")>=0 or request.query_params.get("json")=="1":
+        return JSONResponse({"ok":True})
+    return RedirectResponse(url="/", status_code=303)
+
+@app.post("/api/theme")
+async def api_save_theme(request: Request):
+    if not check_auth(request):
+        return JSONResponse(status_code=403, content={"error":"forbidden"})
+    data = await request.json()
+    # data expected to be dict with colors
+    await db.set_setting("theme", _json.dumps(data, ensure_ascii=False))
+    return JSONResponse({"ok":True})
+
+@app.get("/api/theme")
+async def api_get_theme(request: Request):
+    if not check_auth(request):
+        return JSONResponse(status_code=403, content={"error":"forbidden"})
+    val = await db.get_setting("theme")
+    if not val:
+        return JSONResponse({})
+    try:
+        return JSONResponse(_json.loads(val))
+    except:
+        return JSONResponse({})
 
 
 @app.post("/reminders/delete/{reminder_id}")
@@ -244,15 +419,17 @@ async def delete_reminder(request: Request, reminder_id: int):
     return RedirectResponse(url="/", status_code=303)
 
 
-@app.get("/health")
-async def health():
+@app.api_route("/health", methods=["GET", "HEAD"])
+async def health(request: Request):
     """Liveness probe для UptimeRobot / Koyeb / Render — не требует авторизации."""
     from fastapi.responses import JSONResponse
+    if request.method == "HEAD":
+        return JSONResponse({"status": "ok"}, status_code=200)
     return JSONResponse({"status": "ok", "scheduler_running": bool(_scheduler and _scheduler.running)})
 
 
-@app.get("/ping")
-async def ping():
+@app.api_route("/ping", methods=["GET", "HEAD"])
+async def ping(request: Request):
     """То же что /health, короткое имя для внешних пингеров."""
     from fastapi.responses import JSONResponse
     return JSONResponse({"status": "ok"})
