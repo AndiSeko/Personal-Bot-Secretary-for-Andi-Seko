@@ -3,248 +3,805 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Secretary</title>
+<title>Secretary — Aero</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-:root{--bg:var(--tg-theme-bg-color,#1a1a2e);--sbg:var(--tg-theme-secondary-bg-color,#16213e);--tc:var(--tg-theme-text-color,#e0e0e0);--hc:var(--tg-theme-hint-color,#6b7280);--bc:var(--tg-theme-button-color,#5b7fff);--btc:var(--tg-theme-button-text-color,#fff);--bd:var(--tg-theme-destructive-text-color,#ff4757);--suc:#2ed573}
+/* ===== FRUTIGER AERO THEME ===== */
+:root{
+  --aero-primary:#5b7fff;
+  --aero-accent:#00d4ff;
+  --aero-bg-start:#a0d8ef;
+  --aero-bg-end:#e0f7ff;
+  --aero-glass:rgba(255,255,255,0.62);
+  --aero-glass-strong:rgba(255,255,255,0.82);
+  --aero-text:#1a2a4a;
+  --aero-hint:#6a8aaa;
+  --aero-border:rgba(255,255,255,0.7);
+  --aero-shadow:rgba(31,38,135,0.16);
+  --aero-danger:#ff4757;
+  --aero-success:#2ed573;
+  --aero-card-radius:20px;
+  --aero-blur:16px;
+}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{-webkit-text-size-adjust:100%}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--tc);min-height:100vh;min-height:100dvh;padding-bottom:80px;overflow-x:hidden}
-.header{padding:12px 16px 10px;position:sticky;top:0;background:var(--sbg);z-index:100;border-bottom:1px solid rgba(255,255,255,.06)}
-.header h1{font-size:18px;font-weight:700}
-.header .stats{display:flex;gap:8px;margin-top:6px;font-size:11px;color:var(--hc);flex-wrap:wrap}
-.header .stats span{background:rgba(91,127,255,.15);padding:2px 8px;border-radius:12px;white-space:nowrap}
-.tabs{display:flex;padding:6px 12px;gap:4px;position:sticky;top:0;background:var(--sbg);z-index:99;border-bottom:1px solid rgba(255,255,255,.06)}
-.tab{padding:7px 14px;border-radius:18px;border:none;background:transparent;color:var(--hc);font-size:13px;cursor:pointer;transition:all .2s;white-space:nowrap}
-.tab.active{background:var(--bc);color:var(--btc)}
-.content{padding:10px 12px}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'SF Pro Display',sans-serif;
+  color:var(--aero-text);
+  min-height:100vh; min-height:100dvh;
+  background: linear-gradient(180deg, var(--aero-bg-start) 0%, var(--aero-bg-end) 100%);
+  background-attachment: fixed;
+  overflow-x:hidden;
+  padding-bottom:90px;
+  position:relative;
+}
+/* glossy bubbles background */
+body::before{
+  content:'';
+  position:fixed; inset:0; pointer-events:none; z-index:-2;
+  background:
+    radial-gradient(ellipse 420px 380px at 15% 12%, rgba(255,255,255,0.9) 0%, transparent 70%),
+    radial-gradient(ellipse 520px 420px at 85% 18%, rgba(91,127,255,0.18) 0%, transparent 68%),
+    radial-gradient(ellipse 700px 500px at 50% 95%, rgba(0,212,255,0.14) 0%, transparent 70%);
+}
+.aero-bubbles{position:fixed; inset:0; pointer-events:none; z-index:-1; overflow:hidden}
+.aero-bubbles span{
+  position:absolute; border-radius:50%;
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.5) 28%, rgba(150,210,255,0.22) 62%, rgba(91,127,255,0.12) 100%);
+  border:1px solid rgba(255,255,255,0.7);
+  box-shadow: inset 0 8px 16px rgba(255,255,255,0.85), inset 0 -6px 12px rgba(91,127,255,0.12), 0 8px 24px rgba(91,127,255,0.10);
+  backdrop-filter: blur(2px);
+}
+.b1{width:140px;height:140px; left:-20px; top:60px; opacity:.55}
+.b2{width:90px;height:90px; right:12px; top:130px; opacity:.45}
+.b3{width:200px;height:200px; left:32%; top:340px; opacity:.22}
+.b4{width:120px;height:120px; right:-18px; top:52%; opacity:.35}
+.b5{width:70px;height:70px; left:18%; bottom:120px; opacity:.4}
+
+/* header */
+.aero-header{
+  position:sticky; top:0; z-index:100;
+  backdrop-filter: blur(var(--aero-blur)) saturate(1.4);
+  background: linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.58) 100%);
+  border-bottom:1px solid var(--aero-border);
+  box-shadow: 0 4px 20px var(--aero-shadow), inset 0 1px 0 rgba(255,255,255,0.9);
+  padding:14px 16px 12px;
+}
+.aero-header-top{display:flex; align-items:center; justify-content:space-between; gap:12px}
+.aero-logo{display:flex; align-items:center; gap:10px}
+.aero-logo-icon{
+  width:38px;height:38px; border-radius:12px;
+  background: linear-gradient(135deg, var(--aero-primary) 0%, var(--aero-accent) 100%);
+  display:flex; align-items:center; justify-content:center;
+  color:#fff; font-size:19px;
+  box-shadow: 0 4px 14px rgba(91,127,255,0.45), inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -2px 6px rgba(0,0,0,0.15);
+  position:relative; overflow:hidden;
+}
+.aero-logo-icon::after{
+  content:''; position:absolute; top:2px; left:4px; right:10px; height:14px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.75) 0%, transparent 100%);
+  border-radius: 10px 10px 40px 40px; opacity:.9;
+}
+.aero-logo h1{font-size:19px; font-weight:800; letter-spacing:-0.4px; color:var(--aero-text)}
+.aero-logo p{font-size:11px; color:var(--aero-hint); font-weight:600; margin-top:1px}
+.aero-header-actions{display:flex; gap:8px}
+.aero-icon-btn{
+  width:38px;height:38px; border-radius:12px; border:1px solid var(--aero-border);
+  background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.65) 100%);
+  backdrop-filter: blur(8px);
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px; cursor:pointer;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9);
+  transition: transform .12s, box-shadow .15s;
+}
+.aero-icon-btn:active{transform:scale(.94)}
+
+.stats{display:flex; gap:7px; margin-top:10px; flex-wrap:wrap}
+.stat-pill{
+  font-size:11px; font-weight:700; padding:5px 10px; border-radius:20px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.72) 100%);
+  border:1px solid rgba(255,255,255,0.85);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,1);
+  color:var(--aero-text);
+  display:flex; align-items:center; gap:5px;
+}
+.stat-pill b{color:var(--aero-primary)}
+
+/* tabs */
+.aero-tabs{display:flex; gap:6px; padding:10px 12px; position:sticky; top:0; z-index:99; margin-top:10px}
+.aero-tab{
+  flex:1; padding:11px 8px; border-radius:16px; border:1px solid transparent;
+  background: rgba(255,255,255,0.42); backdrop-filter: blur(10px);
+  color:var(--aero-hint); font-size:13px; font-weight:700; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  transition: all .22s cubic-bezier(.2,.8,.3,1);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+}
+.aero-tab.active{
+  background: linear-gradient(135deg, var(--aero-primary) 0%, var(--aero-accent) 100%);
+  color:#fff; border-color: rgba(255,255,255,0.6);
+  box-shadow: 0 6px 18px rgba(91,127,255,0.38), inset 0 1px 0 rgba(255,255,255,0.65), inset 0 -2px 6px rgba(0,0,0,0.12);
+  transform: translateY(-1px);
+}
+.aero-tab small{display:none}
+@media(min-width:400px){ .aero-tab small{display:inline; font-weight:500; opacity:.85} }
+
+.content{padding:12px 12px 0}
 .panel{display:none}
-.panel.active{display:block}
-.card{background:var(--sbg);border-radius:10px;padding:12px 14px 12px 12px;margin-bottom:8px;position:relative}
-.card-top{display:flex;align-items:center;gap:6px;margin-bottom:2px}
-.card-id{font-size:11px;color:var(--hc);font-weight:600}
-.card-type{font-size:9px;padding:2px 6px;border-radius:8px;font-weight:600}
-.card-type.once{background:rgba(91,127,255,.2);color:#5b7fff}
-.card-type.cyclic{background:rgba(255,165,2,.2);color:#ffa502}
-.card-text{font-size:14px;line-height:1.35;margin-bottom:4px;word-break:break-word;padding-right:32px}
-.card-meta{font-size:11px;color:var(--hc);display:flex;gap:8px;flex-wrap:wrap}
-.card-del{position:absolute;top:10px;right:10px;background:rgba(255,71,87,.15);border:none;color:var(--bd);width:26px;height:26px;border-radius:50%;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .2s}
-.card-del:active{opacity:.5}
-.msg-card{background:var(--sbg);border-radius:10px;padding:10px 14px;margin-bottom:8px}
-.msg-tag{font-size:11px;color:var(--bc);font-weight:600;margin-bottom:3px}
-.msg-tag.owner{color:var(--suc)}
-.msg-text{font-size:13px;line-height:1.35;word-break:break-word}
-.msg-time{font-size:10px;color:var(--hc);margin-top:3px}
-.fab:active{transform:scale(.9)}
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:flex-end;justify-content:center}
+.panel.active{display:block; animation: fadeIn .24s ease}
+@keyframes fadeIn{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+@keyframes slideUp{from{transform:translateY(14px); opacity:0} to{transform:none; opacity:1}}
+
+/* glass card */
+.glass-card{
+  background: linear-gradient(180deg, var(--aero-glass-strong) 0%, var(--aero-glass) 100%);
+  backdrop-filter: blur(var(--aero-blur)) saturate(1.25);
+  border:1px solid var(--aero-border);
+  border-radius:var(--aero-card-radius);
+  box-shadow: 0 8px 28px var(--aero-shadow), inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -1px 6px rgba(255,255,255,0.45);
+  padding:14px 15px;
+  margin-bottom:10px;
+  position:relative; overflow:hidden;
+}
+.glass-card::before{
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95), transparent);
+}
+.card-top{display:flex; align-items:center; gap:6px; margin-bottom:6px}
+.card-id{font-size:11px; color:var(--aero-hint); font-weight:700; background:rgba(255,255,255,0.65); padding:2px 7px; border-radius:8px; border:1px solid rgba(255,255,255,0.8)}
+.card-type{font-size:10px; padding:3px 8px; border-radius:10px; font-weight:800; letter-spacing:.2px; border:1px solid rgba(255,255,255,0.7)}
+.card-type.once{background: linear-gradient(180deg, rgba(91,127,255,0.18) 0%, rgba(91,127,255,0.10) 100%); color:var(--aero-primary); box-shadow:inset 0 1px 0 rgba(255,255,255,0.7)}
+.card-type.cyclic{background: linear-gradient(180deg, rgba(255,165,2,0.22) 0%, rgba(255,165,2,0.12) 100%); color:#c77a00}
+.card-type.event{background: linear-gradient(180deg, rgba(0,212,255,0.18) 0%, rgba(0,212,255,0.09) 100%); color:#0a8aaa}
+.card-color-dot{width:10px;height:10px;border-radius:50%; border:1px solid rgba(255,255,255,0.8); box-shadow:0 1px 4px rgba(0,0,0,0.15), inset 0 1px 2px rgba(255,255,255,0.8)}
+.card-text{font-size:14.5px; line-height:1.38; word-break:break-word; font-weight:600; color:var(--aero-text); padding-right:30px}
+.card-desc{font-size:12.5px; color:var(--aero-hint); margin-top:3px; word-break:break-word}
+.card-meta{font-size:11px; color:var(--aero-hint); display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; font-weight:600}
+.card-meta span{background:rgba(255,255,255,0.65); padding:3px 8px; border-radius:10px; border:1px solid rgba(255,255,255,0.6)}
+.card-del, .card-edit{
+  position:absolute; width:30px;height:30px; border-radius:50%; border:1px solid rgba(255,255,255,0.8);
+  display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:13px;
+  transition: transform .12s, opacity .15s;
+}
+.card-del{top:12px; right:12px; background: linear-gradient(180deg, rgba(255,71,87,0.14) 0%, rgba(255,71,87,0.08) 100%); color:var(--aero-danger)}
+.card-edit{top:12px; right:48px; background: linear-gradient(180deg, rgba(91,127,255,0.14) 0%, rgba(91,127,255,0.07) 100%); color:var(--aero-primary)}
+.card-del:active, .card-edit:active{transform:scale(.9)}
+
+/* messages */
+.msg-card{padding:12px 14px}
+.msg-tag{font-size:11px; font-weight:800; margin-bottom:4px; display:flex; align-items:center; gap:6px}
+.msg-tag::before{content:''; width:8px;height:8px;border-radius:50%; background:var(--aero-accent); box-shadow:0 0 6px var(--aero-accent)}
+.msg-tag.owner::before{background:var(--aero-success); box-shadow:0 0 6px var(--aero-success)}
+.msg-text{font-size:13.5px; line-height:1.42; word-break:break-word}
+.msg-time{font-size:10.5px; color:var(--aero-hint); margin-top:5px; font-weight:600}
+
+/* calendar */
+.cal-wrap{padding:0 0 10px}
+.cal-header{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px}
+.cal-title{font-size:18px; font-weight:800; letter-spacing:-0.3px; display:flex; align-items:center; gap:8px}
+.cal-title b{font-weight:800}
+.cal-nav{display:flex; gap:8px}
+.cal-nav button{
+  width:38px;height:38px; border-radius:12px; border:1px solid var(--aero-border);
+  background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.68) 100%);
+  backdrop-filter: blur(8px); cursor:pointer; font-size:16px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.07), inset 0 1px 0 #fff;
+}
+.cal-grid{
+  background: linear-gradient(180deg, var(--aero-glass-strong) 0%, var(--aero-glass) 100%);
+  backdrop-filter: blur(var(--aero-blur)); border:1px solid var(--aero-border);
+  border-radius:22px; padding:10px;
+  box-shadow:0 8px 28px var(--aero-shadow), inset 0 1px 0 rgba(255,255,255,0.95);
+}
+.cal-weekdays{display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:6px}
+.cal-weekdays span{text-align:center; font-size:11px; font-weight:800; color:var(--aero-hint); padding:4px 0}
+.cal-days{display:grid; grid-template-columns:repeat(7,1fr); gap:5px}
+.cal-day{
+  min-height:66px; border-radius:14px; padding:6px 5px 4px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.78) 0%, rgba(255,255,255,0.52) 100%);
+  border:1px solid rgba(255,255,255,0.65);
+  cursor:pointer; position:relative;
+  transition: all .16s ease;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 4px rgba(0,0,0,0.04);
+  display:flex; flex-direction:column;
+}
+.cal-day:hover{transform:translateY(-1px); box-shadow:0 4px 14px rgba(0,0,0,0.08), inset 0 1px 0 #fff}
+.cal-day.other{opacity:.38; background:rgba(255,255,255,0.32)}
+.cal-day.today{
+  background: linear-gradient(135deg, var(--aero-primary) 0%, var(--aero-accent) 100%);
+  color:#fff; border-color:rgba(255,255,255,0.75);
+  box-shadow:0 6px 16px rgba(91,127,255,0.35), inset 0 1px 0 rgba(255,255,255,0.7);
+}
+.cal-day.today .cal-day-num{color:#fff}
+.cal-day.today .cal-dot{background:#fff}
+.cal-day.selected{outline:2px solid var(--aero-primary); outline-offset:1px}
+.cal-day-num{font-size:12px; font-weight:800; line-height:1; margin-bottom:3px; color:var(--aero-text)}
+.cal-dots{display:flex; gap:2px; flex-wrap:wrap; margin-top:auto}
+.cal-dot{width:6px;height:6px;border-radius:50%; border:1px solid rgba(255,255,255,0.8); box-shadow:0 1px 3px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.9)}
+.cal-preview{font-size:8.5px; font-weight:700; line-height:1.15; color:var(--aero-text); background:rgba(255,255,255,0.72); border-radius:6px; padding:1px 3px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; border:1px solid rgba(255,255,255,0.6)}
+.cal-day.today .cal-preview{background:rgba(255,255,255,0.92); color:var(--aero-primary)}
+.cal-day.has-events{}
+
+/* day modal list */
+.day-events-list{max-height:46vh; overflow-y:auto; margin-top:8px; padding-right:2px}
+.day-ev-item{
+  display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:14px; margin-bottom:7px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.65) 100%);
+  border:1px solid rgba(255,255,255,0.8); cursor:pointer;
+  box-shadow:0 2px 10px rgba(0,0,0,0.06), inset 0 1px 0 #fff;
+}
+.day-ev-dot{width:10px;height:10px;border-radius:50%; flex-shrink:0; border:1px solid rgba(255,255,255,0.9); box-shadow:0 1px 4px rgba(0,0,0,0.12)}
+.day-ev-info{flex:1; min-width:0}
+.day-ev-title{font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.day-ev-sub{font-size:11px; color:var(--aero-hint); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.day-ev-time{font-size:11px; font-weight:800; color:var(--aero-primary); white-space:nowrap}
+
+/* fab */
+.aero-fab{
+  position:fixed; right:16px; bottom:calc(18px + env(safe-area-inset-bottom,0px));
+  width:58px;height:58px; border-radius:18px; border:1px solid rgba(255,255,255,0.75);
+  background: linear-gradient(135deg, var(--aero-primary) 0%, var(--aero-accent) 100%);
+  color:#fff; font-size:28px; cursor:pointer; z-index:200;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 8px 22px rgba(91,127,255,0.45), inset 0 1px 0 rgba(255,255,255,0.65), inset 0 -2px 8px rgba(0,0,0,0.12);
+  transition: transform .14s;
+}
+.aero-fab:active{transform:scale(.93)}
+
+/* modals */
+.modal-overlay{display:none; position:fixed; inset:0; background:rgba(31,42,74,0.28); backdrop-filter: blur(6px); z-index:300; align-items:flex-end; justify-content:center}
 .modal-overlay.show{display:flex}
-.modal{background:var(--sbg);border-radius:16px 16px 0 0;padding:20px 14px 32px;width:100%;max-width:480px;animation:slideUp .2s ease;max-height:90vh;max-height:90dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(32px + env(safe-area-inset-bottom,0px))}
-.modal h3{font-size:17px;margin-bottom:10px}
-.modal label{display:block;font-size:12px;color:var(--hc);margin-bottom:4px;margin-top:8px}
-.modal input[type=text],.modal input[type=number],.modal input[type=date],.modal input[type=time]{width:100%;padding:10px 12px;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:var(--bg);color:var(--tc);font-size:16px;-webkit-appearance:none;appearance:none;outline:none;min-height:44px}
-.modal input:focus{border-color:var(--bc)}
-input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-calendar-picker-indicator{filter:invert(1);cursor:pointer}
-.mode-switch{display:flex;gap:4px;margin:8px 0}
-.mode-btn{flex:1;padding:10px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:transparent;color:var(--hc);font-size:12px;cursor:pointer;text-align:center;transition:all .2s;min-height:42px;display:flex;align-items:center;justify-content:center}
-.mode-btn.active{background:var(--bc);color:var(--btc);border-color:var(--bc)}
-.dur-row{display:flex;gap:4px;align-items:center;justify-content:center;flex-wrap:wrap}
-.dur-group{display:flex;align-items:center;gap:2px}
-.dur-group input{width:52px;text-align:center;padding:10px 4px;font-size:16px;min-width:0}
-.dur-group span{font-size:12px;color:var(--hc);min-width:22px}
-.freq-section{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.06)}
-.check-row{display:flex;align-items:center;gap:8px;margin-top:8px;margin-bottom:4px}
-.check-row input[type=checkbox]{width:20px;height:20px;accent-color:var(--bc);flex-shrink:0}
-.check-row label{margin:0;font-size:14px;color:var(--tc);-webkit-user-select:none;user-select:none}
-.modal-btns{display:flex;gap:8px;margin-top:16px;padding-bottom:env(safe-area-inset-bottom,0px)}
-.modal-btns button{flex:1;padding:13px;border:none;border-radius:10px;font-size:15px;cursor:pointer;min-height:46px}
-.modal-btns .btn-ok{background:var(--bc);color:var(--btc)}
-.modal-btns .btn-cancel{background:rgba(255,255,255,.08);color:var(--tc)}
-.btn-ok:active,.btn-cancel:active{opacity:.7}
-.danger-btn{background:rgba(255,71,87,.12);color:var(--bd);border:none;padding:10px;border-radius:8px;font-size:12px;cursor:pointer;margin-top:10px;width:100%}
-.danger-btn:active{opacity:.7}
-.empty{text-align:center;padding:32px 16px;color:var(--hc);font-size:13px}
-.confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;align-items:center;justify-content:center}
+.modal{
+  background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(240,249,255,0.96) 100%);
+  backdrop-filter: blur(18px); border:1px solid rgba(255,255,255,0.85);
+  border-radius:24px 24px 0 0; padding:18px 14px 28px; width:100%; max-width:480px;
+  animation:slideUp .24s cubic-bezier(.2,.8,.3,1);
+  max-height:92vh; max-height:92dvh; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  box-shadow:0 -8px 32px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,1);
+  padding-bottom:calc(28px + env(safe-area-inset-bottom,0px));
+}
+.modal h3{font-size:17px; font-weight:800; letter-spacing:-0.3px; margin-bottom:10px; display:flex; align-items:center; gap:8px}
+.modal h3 i{width:30px;height:30px; border-radius:10px; background:linear-gradient(135deg,var(--aero-primary),var(--aero-accent)); display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; font-style:normal}
+.modal label{display:block; font-size:11px; color:var(--aero-hint); font-weight:800; margin-bottom:4px; margin-top:10px; text-transform:uppercase; letter-spacing:.4px}
+.modal input[type=text], .modal input[type=number], .modal input[type=date], .modal input[type=time], .modal textarea, .modal select{
+  width:100%; padding:11px 12px; border:1px solid rgba(130,160,200,0.22); border-radius:12px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.78) 100%);
+  color:var(--aero-text); font-size:15px; outline:none; min-height:44px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,1), 0 1px 6px rgba(0,0,0,0.04);
+  transition: border-color .15s, box-shadow .15s;
+}
+.modal textarea{resize:vertical; min-height:64px}
+.modal input:focus, .modal textarea:focus, .modal select:focus{border-color:var(--aero-primary); box-shadow:0 0 0 3px rgba(91,127,255,0.15)}
+input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-calendar-picker-indicator{filter: hue-rotate(210deg) saturate(1.2); cursor:pointer}
+
+.mode-switch{display:flex; gap:6px; margin:8px 0}
+.mode-btn{flex:1; padding:10px 4px; border:1px solid rgba(130,160,200,0.18); border-radius:12px; background:rgba(255,255,255,0.65); color:var(--aero-hint); font-size:12px; font-weight:700; cursor:pointer; text-align:center; transition:all .18s; min-height:42px; display:flex; align-items:center; justify-content:center}
+.mode-btn.active{background: linear-gradient(135deg, var(--aero-primary) 0%, var(--aero-accent) 100%); color:#fff; border-color:rgba(255,255,255,0.5); box-shadow:0 4px 12px rgba(91,127,255,0.28)}
+.dur-row{display:flex; gap:6px; align-items:center; justify-content:center; flex-wrap:wrap; background:rgba(255,255,255,0.55); padding:8px; border-radius:12px; border:1px solid rgba(255,255,255,0.7)}
+.dur-group{display:flex; align-items:center; gap:4px}
+.dur-group input{width:58px; text-align:center; padding:10px 4px; font-weight:700}
+.dur-group span{font-size:11px; color:var(--aero-hint); font-weight:800; min-width:22px}
+.freq-section{margin-top:10px; padding-top:10px; border-top:1px solid rgba(130,160,200,0.12)}
+.check-row{display:flex; align-items:center; gap:8px; margin-top:10px; margin-bottom:4px; background:rgba(255,255,255,0.55); padding:8px 10px; border-radius:12px; border:1px solid rgba(255,255,255,0.6)}
+.check-row input[type=checkbox]{width:20px;height:20px; accent-color:var(--aero-primary); flex-shrink:0}
+.check-row label{margin:0; font-size:13px; color:var(--aero-text); text-transform:none; letter-spacing:0; font-weight:700}
+.modal-btns{display:flex; gap:8px; margin-top:16px}
+.modal-btns button{flex:1; padding:13px; border:none; border-radius:12px; font-size:15px; font-weight:800; cursor:pointer; min-height:46px; transition: transform .12s, opacity .15s}
+.modal-btns .btn-ok{background: linear-gradient(135deg, var(--aero-primary) 0%, var(--aero-accent) 100%); color:#fff; box-shadow:0 6px 16px rgba(91,127,255,0.32), inset 0 1px 0 rgba(255,255,255,0.6)}
+.modal-btns .btn-cancel{background:rgba(255,255,255,0.75); color:var(--aero-text); border:1px solid rgba(130,160,200,0.18)}
+.btn-ok:active, .btn-cancel:active{transform:scale(.98)}
+.danger-btn{background: linear-gradient(180deg, rgba(255,71,87,0.12) 0%, rgba(255,71,87,0.08) 100%); color:var(--aero-danger); border:1px solid rgba(255,71,87,0.18); padding:11px; border-radius:12px; font-size:12px; font-weight:800; cursor:pointer; margin-top:10px; width:100%}
+.empty{text-align:center; padding:28px 16px; color:var(--aero-hint); font-size:13px; font-weight:600}
+.confirm-overlay{display:none; position:fixed; inset:0; background:rgba(31,42,74,0.32); backdrop-filter: blur(6px); z-index:400; align-items:center; justify-content:center}
 .confirm-overlay.show{display:flex}
-.confirm-box{background:var(--sbg);border-radius:14px;padding:20px;text-align:center;max-width:280px;width:90%}
-.confirm-box p{margin-bottom:16px;font-size:14px}
-.confirm-box .btns{display:flex;gap:8px}
-.confirm-box .btns button{flex:1;padding:10px;border:none;border-radius:8px;font-size:13px;cursor:pointer}
-.target-section{margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.06)}
+.confirm-box{background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(240,249,255,0.98) 100%); border:1px solid rgba(255,255,255,0.85); border-radius:20px; padding:20px; text-align:center; max-width:300px; width:90%; box-shadow:0 12px 32px rgba(0,0,0,0.16), inset 0 1px 0 #fff}
+.confirm-box p{margin-bottom:16px; font-size:14px; font-weight:700}
+.confirm-box .btns{display:flex; gap:8px}
+.confirm-box .btns button{flex:1; padding:11px; border:none; border-radius:12px; font-size:13px; font-weight:800; cursor:pointer}
+.target-section{margin-top:6px; padding-top:6px; border-top:1px solid rgba(130,160,200,0.12)}
 .target-row{position:relative}
-.target-row input{padding-right:32px}
-.target-suggestions{position:absolute;left:0;right:0;top:100%;background:var(--sbg);border:1px solid rgba(255,255,255,.1);border-radius:8px;margin-top:2px;max-height:120px;overflow-y:auto;-webkit-overflow-scrolling:touch;z-index:10;display:none;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.target-suggestions{position:absolute; left:0; right:0; top:100%; background:rgba(255,255,255,0.98); border:1px solid rgba(130,160,200,0.18); border-radius:12px; margin-top:4px; max-height:130px; overflow-y:auto; z-index:10; display:none; box-shadow:0 8px 20px rgba(0,0,0,0.12)}
 .target-suggestions.show{display:block}
-.target-suggestions div{padding:10px 12px;font-size:14px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-tap-highlight-color:transparent}
-.target-suggestions div:active{background:rgba(91,127,255,.25)}
-.card-target{font-size:11px;color:var(--bc);margin-bottom:2px}
-.fab{position:fixed;right:16px;width:52px;height:52px;border-radius:50%;background:var(--bc);color:var(--btc);border:none;font-size:26px;cursor:pointer;box-shadow:0 4px 14px rgba(91,127,255,.4);z-index:200;line-height:1;bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+.target-suggestions div{padding:10px 12px; font-size:13px; font-weight:600; cursor:pointer}
+.target-suggestions div:active{background:rgba(91,127,255,0.12)}
+.card-target{font-size:11px; color:var(--aero-primary); font-weight:700; margin-bottom:2px}
+.color-row{display:flex; gap:8px; margin-top:6px; flex-wrap:wrap; align-items:center}
+.color-dot{width:32px;height:32px;border-radius:50%; border:2px solid rgba(255,255,255,0.9); cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.12), inset 0 1px 2px rgba(255,255,255,0.9); transition: transform .12s, box-shadow .12s; position:relative}
+.color-dot.active{transform:scale(1.12); box-shadow:0 4px 14px rgba(0,0,0,0.18), 0 0 0 3px var(--aero-primary)}
+.color-dot.active::after{content:'✓'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#fff; font-size:13px; font-weight:800; text-shadow:0 1px 2px rgba(0,0,0,0.3)}
+.color-input{width:32px;height:32px; border-radius:50%; padding:0; border:2px solid rgba(255,255,255,0.9); overflow:hidden; cursor:pointer}
+.theme-presets{display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:8px}
+.theme-preset{padding:10px; border-radius:14px; border:1px solid rgba(255,255,255,0.75); cursor:pointer; display:flex; align-items:center; gap:8px; background:linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.65) 100%); box-shadow:0 2px 10px rgba(0,0,0,0.06); transition: transform .12s}
+.theme-preset:active{transform:scale(.97)}
+.theme-preset.active{outline:2px solid var(--aero-primary); outline-offset:1px}
+.preset-dots{display:flex; gap:3px}
+.preset-dots span{width:14px;height:14px;border-radius:50%; border:1px solid rgba(255,255,255,0.8); box-shadow:0 1px 3px rgba(0,0,0,0.12)}
+.theme-edit-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px}
+.theme-edit-grid label{font-size:10px; margin-top:0}
+.theme-edit-grid input[type=color]{width:100%; height:40px; border-radius:10px; border:1px solid rgba(130,160,200,0.2); padding:2px; background:#fff}
 </style>
 </head>
 <body>
+<div class="aero-bubbles"><span class="b1"></span><span class="b2"></span><span class="b3"></span><span class="b4"></span><span class="b5"></span></div>
 
-<div class="header">
-  <h1>Secretary</h1>
+<div class="aero-header">
+  <div class="aero-header-top">
+    <div class="aero-logo">
+      <div class="aero-logo-icon">☁️</div>
+      <div>
+        <h1>Secretary</h1>
+        <p>Frutiger Aero • Кабинет</p>
+      </div>
+    </div>
+    <div class="aero-header-actions">
+      <button class="aero-icon-btn" onclick="openThemeModal()" title="Темы">🎨</button>
+      <button class="aero-icon-btn" onclick="location.href='/logout'" title="Выйти">⎋</button>
+    </div>
+  </div>
   <div class="stats">
-    <span>Активных: {{active_count}}</span>
-    <span>Цикличных: {{cyclic_count}}</span>
-    <span>Сообщений: {{msg_count}}</span>
+    <span class="stat-pill">📅 <b>{{calendar_count}}</b> событий</span>
+    <span class="stat-pill">🔔 <b>{{active_count}}</b> активных</span>
+    <span class="stat-pill">🔁 <b>{{cyclic_count}}</b> цикличных</span>
+    <span class="stat-pill">💬 <b>{{msg_count}}</b> сообщений</span>
   </div>
 </div>
 
-<div class="tabs">
-  <button class="tab active" onclick="switchTab('reminders')">Напоминания</button>
-  <button class="tab" onclick="switchTab('messages')">Сообщения</button>
+<div class="aero-tabs">
+  <button class="aero-tab active" data-tab="calendar" onclick="switchTab('calendar')">📅 Календарь</button>
+  <button class="aero-tab" data-tab="reminders" onclick="switchTab('reminders')">🔔 Напоминания</button>
+  <button class="aero-tab" data-tab="messages" onclick="switchTab('messages')">💬 Сообщения</button>
 </div>
 
 <div class="content">
-  <div id="panel-reminders" class="panel active">
-    {% if reminders %}
-      {% for r in reminders %}
-      <div class="card">
-        <div class="card-top">
-          <span class="card-id">#{{r.id}}</span>
-          {% if r.is_cyclic %}
-            <span class="card-type cyclic">Цикличное</span>
-          {% else %}
-            <span class="card-type once">Разовое</span>
-          {% endif %}
+  <!-- CALENDAR PANEL -->
+  <div id="panel-calendar" class="panel active">
+    <div class="cal-wrap">
+      <div class="cal-header">
+        <div class="cal-title"><span>🫧</span> <b id="cal-month-label">—</b></div>
+        <div class="cal-nav">
+          <button onclick="calShift(-1)">‹</button>
+          <button onclick="calToday()">●</button>
+          <button onclick="calShift(1)">›</button>
         </div>
-        {% if r.target_chat_id and r.target_chat_id != owner_id %}
-        <div class="card-target">→ пользователю</div>
-        {% endif %}
-        <div class="card-text">{{r.text}}</div>
-        <div class="card-meta">
-          <span>{{r.remind_at_fmt}}</span>
-          {% if r.interval_fmt %}<span>{{r.interval_fmt}}</span>{% endif %}
-        </div>
-        <button class="card-del" onclick="delReminder({{r.id}})" title="Удалить">✕</button>
       </div>
-      {% endfor %}
-      {% if active_count > 0 %}
-      <button class="danger-btn" onclick="showConfirmDelAll()">Удалить все напоминания</button>
-      {% endif %}
-    {% else %}
-      <div class="empty">Нет напоминаний</div>
-    {% endif %}
+      <div class="cal-grid">
+        <div class="cal-weekdays"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span></div>
+        <div class="cal-days" id="cal-days"></div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:10px">
+        <button class="glass-card" style="flex:1; padding:10px; font-weight:800; font-size:12px; cursor:pointer; text-align:center; border-radius:14px" onclick="openDayModal(calSelectedDate)">+ Событие на выбранный день</button>
+        <button class="glass-card" style="padding:10px 14px; font-weight:800; font-size:12px; cursor:pointer; border-radius:14px" onclick="openEventModal(calSelectedDate)">⚡ Быстро</button>
+      </div>
+      <div id="cal-legend" style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap; font-size:10px; font-weight:700; color:var(--aero-hint)">
+        <span style="display:flex;align-items:center;gap:4px"><span class="card-color-dot" style="background:#5b7fff"></span> События</span>
+        <span style="display:flex;align-items:center;gap:4px"><span class="card-color-dot" style="background:#ff7e5f"></span> Напоминания</span>
+        <span style="display:flex;align-items:center;gap:4px"><span class="card-color-dot" style="background:#ffa502"></span> Цикличные</span>
+      </div>
+    </div>
   </div>
 
+  <!-- REMINDERS PANEL -->
+  <div id="panel-reminders" class="panel">
+    {% if reminders %}
+      {% for r in reminders %}
+      <div class="glass-card">
+        <div class="card-top">
+          <span class="card-id">#{{r.id}}</span>
+          {% if r.is_cyclic %}<span class="card-type cyclic">🔁 Цикличное</span>{% else %}<span class="card-type once">🔔 Разовое</span>{% endif %}
+        </div>
+        {% if r.target_chat_id and r.target_chat_id != owner_id %}<div class="card-target">→ пользователю</div>{% endif %}
+        <div class="card-text">{{r.text}}</div>
+        <div class="card-meta"><span>⏰ {{r.remind_at_fmt}}</span>{% if r.interval_fmt %}<span>{{r.interval_fmt}}</span>{% endif %}</div>
+        <button class="card-del" onclick="delReminder({{r.id}})">✕</button>
+      </div>
+      {% endfor %}
+      {% if active_count > 0 %}<button class="danger-btn" onclick="showConfirmDelAll()">Удалить все напоминания</button>{% endif %}
+    {% else %}<div class="glass-card empty">Нет напоминаний — добавь первое ✨</div>{% endif %}
+  </div>
+
+  <!-- MESSAGES PANEL -->
   <div id="panel-messages" class="panel">
     {% if messages %}
       {% for m in messages %}
-      <div class="msg-card">
-        <div class="msg-tag {% if m.is_from_owner %}owner{% endif %}">
-          {% if m.is_from_owner %}Вы → @{{owner_username}}{% else %}[{{m.from_username}}]{% endif %}
-        </div>
+      <div class="glass-card msg-card">
+        <div class="msg-tag {% if m.is_from_owner %}owner{% endif %}">{% if m.is_from_owner %}Вы → @{{owner_username}}{% else %}[{{m.from_username}}]{% endif %}</div>
         {% if m.text %}<div class="msg-text">{{m.text}}</div>{% endif %}
         {% if m.photo_file_id %}<div class="msg-text">📷 Фото</div>{% endif %}
         <div class="msg-time">{{m.created_at_fmt}}</div>
       </div>
       {% endfor %}
-    {% else %}
-      <div class="empty">Нет сообщений</div>
-    {% endif %}
+    {% else %}<div class="glass-card empty">Нет сообщений</div>{% endif %}
   </div>
 </div>
 
-<button class="fab" onclick="openModal()">+</button>
+<button class="aero-fab" id="fab" onclick="fabAction()">+</button>
 
+<!-- Reminder modal (legacy) -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
   <div class="modal" onclick="event.stopPropagation()">
-    <h3>Новое напоминание</h3>
-
-    <div class="check-row">
-      <input type="checkbox" id="inp-cyclic" onchange="toggleCyclic()">
-      <label for="inp-cyclic">Цикличное напоминание</label>
-    </div>
-
-    <div class="check-row">
-      <input type="checkbox" id="inp-for-other" onchange="toggleForOther()">
-      <label for="inp-for-other">Другому пользователю</label>
-    </div>
-
-    <div id="target-section" style="display:none">
-      <label>Тег пользователя</label>
-      <div class="target-row">
-        <input type="text" id="inp-target" placeholder="@username" autocomplete="off" oninput="onTargetInput()">
-        <div class="target-suggestions" id="target-suggestions"></div>
-      </div>
-    </div>
-
+    <h3><i>🔔</i> Новое напоминание</h3>
+    <div class="check-row"><input type="checkbox" id="inp-cyclic" onchange="toggleCyclic()"><label for="inp-cyclic">Цикличное напоминание</label></div>
+    <div class="check-row"><input type="checkbox" id="inp-for-other" onchange="toggleForOther()"><label for="inp-for-other">Другому пользователю</label></div>
+    <div id="target-section" style="display:none"><label>Тег пользователя</label><div class="target-row"><input type="text" id="inp-target" placeholder="@username" autocomplete="off" oninput="onTargetInput()"><div class="target-suggestions" id="target-suggestions"></div></div></div>
     <div id="once-mode">
-      <div class="mode-switch">
-        <button class="mode-btn active" onclick="setOnceMode('exact')">Точное время</button>
-        <button class="mode-btn" onclick="setOnceMode('after')">Через</button>
-      </div>
-
-      <div id="once-exact">
-        <label>Дата</label>
-        <input type="date" id="inp-date">
-        <label>Время</label>
-        <input type="time" id="inp-time-at">
-      </div>
-
-      <div id="once-after" style="display:none">
-        <label>Напомнить через</label>
-        <div class="dur-row">
-          <div class="dur-group"><input type="number" id="inp-aft-d" min="0" value="0" inputmode="numeric"><span>дн</span></div>
-          <div class="dur-group"><input type="number" id="inp-aft-h" min="0" max="23" value="0" inputmode="numeric"><span>ч</span></div>
-          <div class="dur-group"><input type="number" id="inp-aft-m" min="0" max="59" value="5" inputmode="numeric"><span>мин</span></div>
-        </div>
-      </div>
+      <div class="mode-switch"><button class="mode-btn active" onclick="setOnceMode('exact')">Точное время</button><button class="mode-btn" onclick="setOnceMode('after')">Через</button></div>
+      <div id="once-exact"><label>Дата</label><input type="date" id="inp-date"><label>Время</label><input type="time" id="inp-time-at"></div>
+      <div id="once-after" style="display:none"><label>Напомнить через</label><div class="dur-row"><div class="dur-group"><input type="number" id="inp-aft-d" min="0" value="0" inputmode="numeric"><span>дн</span></div><div class="dur-group"><input type="number" id="inp-aft-h" min="0" max="23" value="0" inputmode="numeric"><span>ч</span></div><div class="dur-group"><input type="number" id="inp-aft-m" min="0" max="59" value="5" inputmode="numeric"><span>мин</span></div></div></div>
     </div>
+    <div id="cyclic-mode" style="display:none"><label>Дата первого срабатывания</label><input type="date" id="inp-c-date"><label>Время</label><input type="time" id="inp-c-time"><div class="freq-section"><label>Повторять каждые</label><div class="dur-row"><div class="dur-group"><input type="number" id="inp-int-d" min="0" value="0" inputmode="numeric"><span>дн</span></div><div class="dur-group"><input type="number" id="inp-int-h" min="0" max="23" value="1" inputmode="numeric"><span>ч</span></div><div class="dur-group"><input type="number" id="inp-int-m" min="0" max="59" value="0" inputmode="numeric"><span>мин</span></div></div></div></div>
+    <label>Текст напоминания</label><input type="text" id="inp-text" placeholder="Проверить почту">
+    <div class="modal-btns"><button class="btn-cancel" onclick="closeModal()">Отмена</button><button class="btn-ok" onclick="addReminder()">Создать</button></div>
+  </div>
+</div>
 
-    <div id="cyclic-mode" style="display:none">
-      <label>Дата первого срабатывания</label>
-      <input type="date" id="inp-c-date">
-      <label>Время первого срабатывания</label>
-      <input type="time" id="inp-c-time">
+<!-- Day modal -->
+<div class="modal-overlay" id="day-modal" onclick="closeDayModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3><i>📅</i> <span id="day-modal-title">День</span></h3>
+    <div id="day-events" class="day-events-list"></div>
+    <div id="day-empty" class="empty" style="display:none">На этот день нет событий — создай первое ✨</div>
+    <div class="modal-btns"><button class="btn-cancel" onclick="closeDayModal()">Закрыть</button><button class="btn-ok" onclick="fromDayToEvent()">+ Событие</button></div>
+  </div>
+</div>
 
-      <div class="freq-section">
-        <label>Повторять каждые</label>
-        <div class="dur-row">
-          <div class="dur-group"><input type="number" id="inp-int-d" min="0" value="0" inputmode="numeric"><span>дн</span></div>
-          <div class="dur-group"><input type="number" id="inp-int-h" min="0" max="23" value="1" inputmode="numeric"><span>ч</span></div>
-          <div class="dur-group"><input type="number" id="inp-int-m" min="0" max="59" value="0" inputmode="numeric"><span>мин</span></div>
-        </div>
-      </div>
+<!-- Event modal (calendar) -->
+<div class="modal-overlay" id="event-modal" onclick="closeEventModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3><i>✨</i> <span id="event-modal-title">Новое событие</span></h3>
+    <input type="hidden" id="ev-id" value="">
+    <label>Название</label><input type="text" id="ev-title" placeholder="Встреча, дедлайн…">
+    <label>Описание (необязательно)</label><textarea id="ev-desc" placeholder="Детали события…"></textarea>
+    <label>Дата</label><input type="date" id="ev-date">
+    <label>Время события</label><input type="time" id="ev-time">
+    <label>Цвет метки</label>
+    <div class="color-row" id="ev-colors">
+      <div class="color-dot active" data-color="#5b7fff" style="background:#5b7fff" onclick="pickColor(this)"></div>
+      <div class="color-dot" data-color="#00d4ff" style="background:#00d4ff" onclick="pickColor(this)"></div>
+      <div class="color-dot" data-color="#2ed573" style="background:#2ed573" onclick="pickColor(this)"></div>
+      <div class="color-dot" data-color="#ffa502" style="background:#ffa502" onclick="pickColor(this)"></div>
+      <div class="color-dot" data-color="#ff4757" style="background:#ff4757" onclick="pickColor(this)"></div>
+      <div class="color-dot" data-color="#a18cd1" style="background:#a18cd1" onclick="pickColor(this)"></div>
+      <input type="color" id="ev-color-custom" class="color-input" value="#5b7fff" oninput="pickCustom(this.value)" title="Свой цвет">
     </div>
-
-    <label>Текст напоминания</label>
-    <input type="text" id="inp-text" placeholder="Проверить почту">
-
+    <label>Напомнить за</label>
+    <div class="dur-row"><div class="dur-group"><input type="number" id="ev-off-h" min="0" max="720" value="1" inputmode="numeric"><span>ч</span></div><div class="dur-group"><input type="number" id="ev-off-m" min="0" max="59" value="0" inputmode="numeric"><span>мин</span></div><span style="font-size:11px;color:var(--aero-hint);font-weight:700">до события</span></div>
+    <div class="check-row"><input type="checkbox" id="ev-for-other" onchange="toggleEvForOther()"><label for="ev-for-other">Другому пользователю</label></div>
+    <div id="ev-target-section" style="display:none"><label>Тег пользователя</label><div class="target-row"><input type="text" id="ev-target" placeholder="@username" autocomplete="off" oninput="onEvTargetInput()"><div class="target-suggestions" id="ev-target-suggestions"></div></div></div>
     <div class="modal-btns">
-      <button class="btn-cancel" onclick="closeModal()">Отмена</button>
-      <button class="btn-ok" onclick="addReminder()">Создать</button>
+      <button class="btn-cancel" onclick="closeEventModal()">Отмена</button>
+      <button class="btn-ok" id="ev-submit" onclick="saveEvent()">Создать</button>
     </div>
+    <button id="ev-delete" style="display:none" class="danger-btn" onclick="deleteEvent()">Удалить событие</button>
   </div>
 </div>
 
-<div class="confirm-overlay" id="confirm-overlay">
-  <div class="confirm-box">
-    <p>Удалить все напоминания?</p>
-    <div class="btns">
-      <button class="btn-cancel" onclick="hideConfirmDelAll()">Отмена</button>
-      <button class="btn-ok" style="background:var(--bd)" onclick="delAll()">Удалить</button>
+<!-- Theme modal -->
+<div class="modal-overlay" id="theme-modal" onclick="closeThemeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3><i>🎨</i> Цветовые темы — Frutiger Aero</h3>
+    <label>Пресеты</label>
+    <div class="theme-presets" id="theme-presets"></div>
+    <div class="theme-edit-grid">
+      <div><label>Primary</label><input type="color" id="th-primary"></div>
+      <div><label>Accent</label><input type="color" id="th-accent"></div>
+      <div><label>Фон верх</label><input type="color" id="th-bgstart"></div>
+      <div><label>Фон низ</label><input type="color" id="th-bgend"></div>
     </div>
+    <label>Прозрачность стекла</label>
+    <input type="range" id="th-alpha" min="0.35" max="0.92" step="0.02" style="width:100%; margin-top:6px">
+    <div class="modal-btns"><button class="btn-cancel" onclick="closeThemeModal()">Закрыть</button><button class="btn-ok" onclick="applyThemeCustom()">Применить</button></div>
+    <button class="danger-btn" onclick="resetTheme()">Сбросить к Aqua</button>
   </div>
 </div>
+
+<div class="confirm-overlay" id="confirm-overlay"><div class="confirm-box"><p>Удалить все напоминания?</p><div class="btns"><button class="btn-cancel" onclick="hideConfirmDelAll()">Отмена</button><button class="btn-ok" style="background:var(--aero-danger); color:#fff" onclick="delAll()">Удалить</button></div></div></div>
 
 <script>
-const tg=window.Telegram?.WebApp;
-if(tg){tg.ready();tg.expand();tg.setHeaderColor('var(--sbg)')}
+const tg=window.Telegram?.WebApp; if(tg){tg.ready();tg.expand();}
 
-function nowISO(){
-  const d=new Date();
-  const pad=n=>String(n).padStart(2,'0');
-  return{date:`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,time:`${pad(d.getHours())}:${pad(d.getMinutes())}`};
+// data from server
+const calendarEvents = {{calendar_events_json | safe}};
+const reminders = {{reminders_json | safe}};
+const serverTheme = {{theme_json | safe}};
+const knownUsers = [{% for u in known_users %}{username:"{{u.username}}",name:"{{u.first_name}}"}{% if not loop.last %},{% endif %}{% endfor %}];
+
+// theme handling
+const THEMES={
+  aqua:{name:'Aqua', primary:'#5b7fff', accent:'#00d4ff', bgStart:'#a0d8ef', bgEnd:'#e0f7ff', alpha:0.62},
+  sunset:{name:'Sunset', primary:'#ff7e5f', accent:'#feb47b', bgStart:'#ffd194', bgEnd:'#ff8a9b', alpha:0.62},
+  aurora:{name:'Aurora', primary:'#a18cd1', accent:'#fbc2eb', bgStart:'#c2e9fb', bgEnd:'#e0c3fc', alpha:0.6},
+  midnight:{name:'Midnight', primary:'#667eea', accent:'#764ba2', bgStart:'#1a1a2e', bgEnd:'#2a3a5a', alpha:0.55},
+  forest:{name:'Forest', primary:'#2ed573', accent:'#7bed9f', bgStart:'#c3f0ca', bgEnd:'#e6f9e6', alpha:0.62},
 }
+function applyTheme(t){
+  document.documentElement.style.setProperty('--aero-primary', t.primary);
+  document.documentElement.style.setProperty('--aero-accent', t.accent);
+  document.documentElement.style.setProperty('--aero-bg-start', t.bgStart);
+  document.documentElement.style.setProperty('--aero-bg-end', t.bgEnd);
+  document.documentElement.style.setProperty('--aero-glass', `rgba(255,255,255,${t.alpha})`);
+  document.documentElement.style.setProperty('--aero-glass-strong', `rgba(255,255,255,${Math.min(0.96, t.alpha+0.18)})`);
+  if(t.bgStart==='#1a1a2e'){
+    document.documentElement.style.setProperty('--aero-text','#e6e9ff');
+    document.documentElement.style.setProperty('--aero-hint','#9aa8c7');
+  } else {
+    document.documentElement.style.setProperty('--aero-text','#1a2a4a');
+    document.documentElement.style.setProperty('--aero-hint','#6a8aaa');
+  }
+  localStorage.setItem('aeroTheme', JSON.stringify(t));
+  fetch('/api/theme',{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(t)}).catch(()=>{});
+}
+function loadTheme(){
+  let t=null;
+  const ls=localStorage.getItem('aeroTheme');
+  if(ls){ try{ t=JSON.parse(ls)}catch{}}
+  if(!t && serverTheme){ t=serverTheme; }
+  if(!t) t=THEMES.aqua;
+  applyTheme(t);
+  return t;
+}
+let currentTheme=loadTheme();
+function openThemeModal(){
+  const root=document.getElementById('theme-presets');
+  root.innerHTML=Object.entries(THEMES).map(([k,v])=>`
+    <div class="theme-preset ${currentTheme.primary===v.primary?'active':''}" onclick="selectPreset('${k}')">
+      <div class="preset-dots"><span style="background:${v.primary}"></span><span style="background:${v.accent}"></span><span style="background:${v.bgStart}"></span></div>
+      <div style="font-size:13px;font-weight:800">${v.name}</div>
+    </div>
+  `).join('');
+  document.getElementById('th-primary').value=currentTheme.primary;
+  document.getElementById('th-accent').value=currentTheme.accent;
+  document.getElementById('th-bgstart').value=currentTheme.bgStart;
+  document.getElementById('th-bgend').value=currentTheme.bgEnd;
+  document.getElementById('th-alpha').value=currentTheme.alpha;
+  document.getElementById('theme-modal').classList.add('show');
+}
+function closeThemeModal(e){ if(!e||e.target===e.currentTarget) document.getElementById('theme-modal').classList.remove('show'); }
+function selectPreset(k){ currentTheme={...THEMES[k]}; applyTheme(currentTheme); openThemeModal(); }
+function applyThemeCustom(){
+  currentTheme={
+    name:'Custom',
+    primary:document.getElementById('th-primary').value,
+    accent:document.getElementById('th-accent').value,
+    bgStart:document.getElementById('th-bgstart').value,
+    bgEnd:document.getElementById('th-bgend').value,
+    alpha:parseFloat(document.getElementById('th-alpha').value)
+  };
+  applyTheme(currentTheme); closeThemeModal();
+}
+function resetTheme(){ currentTheme={...THEMES.aqua}; applyTheme(currentTheme); openThemeModal(); }
 
+// tab switching
+let activeTab='calendar';
 function switchTab(name){
-  document.querySelectorAll('.tab').forEach((t,i)=>{t.classList.toggle('active',['reminders','messages'][i]===name)});
+  activeTab=name;
+  document.querySelectorAll('.aero-tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
+  updateFab();
+}
+function updateFab(){
+  const f=document.getElementById('fab');
+  if(activeTab==='messages'){ f.style.display='none'; } else { f.style.display='flex'; f.textContent='+'; }
+}
+function fabAction(){
+  if(activeTab==='calendar') openEventModal(calSelectedDate);
+  else if(activeTab==='reminders') openModal();
 }
 
+// calendar logic
+let calYear, calMonth; // 0-indexed month
+let calSelectedDate=null;
+const monthNames=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+function toISO(d){ const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
+function nowISO(){ const d=new Date(); const p=n=>String(n).padStart(2,'0'); return{date:`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`, time:`${p(d.getHours())}:${p(d.getMinutes())}`} }
+
+function initCal(){
+  const now=new Date(); calYear=now.getFullYear(); calMonth=now.getMonth(); calSelectedDate=toISO(now);
+  renderCal();
+}
+function calShift(dir){
+  calMonth+=dir;
+  if(calMonth<0){calMonth=11; calYear--}
+  if(calMonth>11){calMonth=0; calYear++}
+  renderCal();
+}
+function calToday(){ const n=new Date(); calYear=n.getFullYear(); calMonth=n.getMonth(); calSelectedDate=toISO(n); renderCal(); }
+
+function getEventsForDate(iso){
+  const evs=calendarEvents.filter(e=>e.event_date===iso);
+  const rems=reminders.filter(r=>{
+    if(!r.remind_at) return false;
+    const d=r.remind_at.slice(0,10); // YYYY-MM-DD
+    return d===iso;
+  }).map(r=>({isReminder:true, id:r.id, text:r.text, time:r.remind_at.slice(11,16), color:r.is_cyclic?'#ffa502':'#ff7e5f', raw:r}));
+  return {evs, rems};
+}
+
+function renderCal(){
+  document.getElementById('cal-month-label').textContent=`${monthNames[calMonth]} ${calYear}`;
+  const first=new Date(calYear, calMonth, 1);
+  let startDay=(first.getDay()+6)%7; // Monday 0
+  const daysInMonth=new Date(calYear, calMonth+1, 0).getDate();
+  const daysInPrev=new Date(calYear, calMonth, 0).getDate();
+  const totalCells=42; // 6 weeks
+  const todayISO=toISO(new Date());
+  let html='';
+  for(let i=0;i<totalCells;i++){
+    let dayNum, iso, other=false, dateObj;
+    if(i<startDay){ dayNum=daysInPrev - startDay +1 + i; dateObj=new Date(calYear, calMonth-1, dayNum); other=true; }
+    else if(i>=startDay+daysInMonth){ dayNum=i - startDay - daysInMonth +1; dateObj=new Date(calYear, calMonth+1, dayNum); other=true; }
+    else { dayNum=i - startDay +1; dateObj=new Date(calYear, calMonth, dayNum); }
+    iso=toISO(dateObj);
+    const {evs, rems}=getEventsForDate(iso);
+    const hasEvents=evs.length+rems.length>0;
+    const isToday=iso===todayISO;
+    const isSelected=iso===calSelectedDate;
+    let dots='';
+    let previews='';
+    const all=[...evs.map(e=>({color:e.color||'#5b7fff', title:e.title})), ...rems.map(r=>({color:r.color, title:r.text}))];
+    if(all.length){
+      dots=`<div class="cal-dots">${all.slice(0,3).map(a=>`<span class="cal-dot" style="background:${a.color}"></span>`).join('')}${all.length>3?`<span style="font-size:8px;font-weight:800;color:var(--aero-hint)">+${all.length-3}</span>`:''}</div>`;
+      if(all.length<=2){
+        previews=all.slice(0,2).map(a=>`<div class="cal-preview">${a.title.slice(0,12)}</div>`).join('');
+      }
+    }
+    html+=`<div class="cal-day ${other?'other':''} ${isToday?'today':''} ${isSelected?'selected':''} ${hasEvents?'has-events':''}" onclick="onDayClick('${iso}')">
+      <div class="cal-day-num">${dayNum}</div>
+      ${previews}
+      ${dots}
+    </div>`;
+  }
+  document.getElementById('cal-days').innerHTML=html;
+}
+function onDayClick(iso){
+  calSelectedDate=iso;
+  renderCal();
+  openDayModal(iso);
+}
+
+// day modal
+let dayModalDate=null;
+function openDayModal(iso){
+  dayModalDate=iso||calSelectedDate||toISO(new Date());
+  const d=new Date(dayModalDate+'T12:00:00');
+  const label=d.toLocaleDateString('ru-RU',{weekday:'long', day:'numeric', month:'long'});
+  document.getElementById('day-modal-title').textContent=label.charAt(0).toUpperCase()+label.slice(1);
+  const {evs, rems}=getEventsForDate(dayModalDate);
+  const list=document.getElementById('day-events');
+  list.innerHTML='';
+  const all=[];
+  evs.forEach(e=>all.push({kind:'event', id:e.id, title:e.title, desc:e.description||'', time:e.event_time, color:e.color||'#5b7fff', offset:e.remind_offset_minutes, raw:e}));
+  rems.forEach(r=>all.push({kind:'reminder', id:r.id, title:r.text, time:r.time, color:r.color, raw:r.raw}));
+  all.sort((a,b)=>a.time.localeCompare(b.time));
+  if(!all.length){
+    document.getElementById('day-empty').style.display='block';
+    list.style.display='none';
+  } else {
+    document.getElementById('day-empty').style.display='none';
+    list.style.display='block';
+    list.innerHTML=all.map(it=>`
+      <div class="day-ev-item" onclick="onDayItemClick('${it.kind}', ${it.id})">
+        <span class="day-ev-dot" style="background:${it.color}"></span>
+        <div class="day-ev-info">
+          <div class="day-ev-title">${it.title}</div>
+          <div class="day-ev-sub">${it.kind==='event' ? (it.desc ? it.desc.slice(0,40) : 'Событие') + ' • ' + (it.offset? 'за '+formatOffset(it.offset)+' до' : 'в момент') : (it.raw.is_cyclic?'Цикличное':'Разовое') }</div>
+        </div>
+        <div class="day-ev-time">${it.time}</div>
+      </div>
+    `).join('');
+  }
+  document.getElementById('day-modal').classList.add('show');
+}
+function closeDayModal(e){ if(!e||e.target===e.currentTarget) document.getElementById('day-modal').classList.remove('show'); }
+function fromDayToEvent(){ closeDayModal(); openEventModal(dayModalDate); }
+function onDayItemClick(kind, id){
+  if(kind==='event'){
+    closeDayModal(); openEventModal(null, id);
+  } else {
+    // for reminder we could show alert or switch tab
+    closeDayModal(); switchTab('reminders');
+    setTimeout(()=>{ const el=document.querySelector(`.glass-card .card-id`); window.scrollTo({top:0,behavior:'smooth'}); },100);
+  }
+}
+function formatOffset(mins){ const h=Math.floor(mins/60), m=mins%60; if(h&&m) return `${h}ч ${m}м`; if(h) return `${h}ч`; return `${m}м`; }
+
+// event modal
+let pickedColor='#5b7fff';
+let editingId=null;
+function pickColor(el){
+  document.querySelectorAll('#ev-colors .color-dot').forEach(d=>d.classList.remove('active'));
+  el.classList.add('active');
+  pickedColor=el.dataset.color;
+  document.getElementById('ev-color-custom').value=pickedColor;
+}
+function pickCustom(v){ pickedColor=v; document.querySelectorAll('#ev-colors .color-dot').forEach(d=>d.classList.remove('active')); }
+function toggleEvForOther(){ const on=document.getElementById('ev-for-other').checked; document.getElementById('ev-target-section').style.display=on?'':'none'; if(!on){document.getElementById('ev-target').value=''; hideEvSug()} }
+function onEvTargetInput(){
+  const val=document.getElementById('ev-target').value.replace(/^@/,'').toLowerCase();
+  const box=document.getElementById('ev-target-suggestions');
+  if(!val){hideEvSug();return}
+  const matches=knownUsers.filter(u=>u.username.toLowerCase().includes(val));
+  if(!matches.length){hideEvSug();return}
+  box.innerHTML=matches.map(u=>`<div onclick="selectEvTarget('${u.username}')">@${u.username}${u.name?' ('+u.name+')':''}</div>`).join('');
+  box.classList.add('show');
+}
+function selectEvTarget(u){ document.getElementById('ev-target').value='@'+u; hideEvSug(); }
+function hideEvSug(){ document.getElementById('ev-target-suggestions').classList.remove('show'); }
+
+function openEventModal(dateISO, editId){
+  editingId=editId||null;
+  const n=nowISO();
+  let title='Новое событие', btn='Создать', del=false;
+  if(editingId){
+    const ev=calendarEvents.find(e=>e.id===editingId);
+    if(!ev) return;
+    title='Редактировать событие'; btn='Сохранить'; del=true;
+    document.getElementById('ev-id').value=ev.id;
+    document.getElementById('ev-title').value=ev.title;
+    document.getElementById('ev-desc').value=ev.description||'';
+    document.getElementById('ev-date').value=ev.event_date;
+    document.getElementById('ev-time').value=ev.event_time;
+    const off=ev.remind_offset_minutes||0;
+    document.getElementById('ev-off-h').value=Math.floor(off/60);
+    document.getElementById('ev-off-m').value=off%60;
+    pickedColor=ev.color||'#5b7fff';
+    document.getElementById('ev-color-custom').value=pickedColor;
+    document.querySelectorAll('#ev-colors .color-dot').forEach(d=>d.classList.toggle('active', d.dataset.color===pickedColor));
+  } else {
+    document.getElementById('ev-id').value='';
+    document.getElementById('ev-title').value='';
+    document.getElementById('ev-desc').value='';
+    const d=dateISO||calSelectedDate||n.date;
+    document.getElementById('ev-date').value=d;
+    document.getElementById('ev-time').value=n.time;
+    document.getElementById('ev-off-h').value=1;
+    document.getElementById('ev-off-m').value=0;
+    pickedColor='#5b7fff';
+    document.querySelectorAll('#ev-colors .color-dot').forEach((d,i)=>d.classList.toggle('active', i===0));
+    document.getElementById('ev-color-custom').value=pickedColor;
+    document.getElementById('ev-for-other').checked=false;
+    document.getElementById('ev-target-section').style.display='none';
+    document.getElementById('ev-target').value='';
+  }
+  document.getElementById('event-modal-title').textContent=title;
+  document.getElementById('ev-submit').textContent=btn;
+  document.getElementById('ev-delete').style.display=del?'':'none';
+  document.getElementById('event-modal').classList.add('show');
+}
+function closeEventModal(e){ if(!e||e.target===e.currentTarget) document.getElementById('event-modal').classList.remove('show'); }
+
+async function saveEvent(){
+  const title=document.getElementById('ev-title').value.trim();
+  if(!title){ alert('Введите название'); return; }
+  const fd=new FormData();
+  fd.append('title', title);
+  fd.append('description', document.getElementById('ev-desc').value.trim());
+  fd.append('event_date', document.getElementById('ev-date').value);
+  fd.append('event_time', document.getElementById('ev-time').value);
+  fd.append('color', pickedColor);
+  fd.append('offset_hours', parseInt(document.getElementById('ev-off-h').value)||0);
+  fd.append('offset_minutes', parseInt(document.getElementById('ev-off-m').value)||0);
+  if(document.getElementById('ev-for-other').checked){
+    const t=document.getElementById('ev-target').value.trim();
+    if(t) fd.append('target_username', t);
+  }
+  const isEdit=!!editingId;
+  const url=isEdit?`/calendar/update/${editingId}`:'/calendar/add';
+  const btn=document.getElementById('ev-submit'); btn.disabled=true; btn.textContent='…';
+  try{
+    const r=await fetch(url,{method:'POST', body:fd});
+    if(r.ok) location.reload(); else alert('Ошибка сохранения');
+  } catch(e){ alert('Сеть: '+e)}
+  btn.disabled=false;
+}
+async function deleteEvent(){
+  if(!editingId) return;
+  if(!confirm('Удалить событие?')) return;
+  await fetch(`/calendar/delete/${editingId}`,{method:'POST'});
+  location.reload();
+}
+
+// reminders modal legacy (keep)
 function openModal(){
   const n=nowISO();
   document.getElementById('inp-date').value=n.date;
@@ -253,7 +810,6 @@ function openModal(){
   document.getElementById('inp-c-time').value=n.time;
   document.getElementById('modal-overlay').classList.add('show');
 }
-
 function closeModal(e){
   if(!e||e.target===e.currentTarget){
     document.getElementById('modal-overlay').classList.remove('show');
@@ -267,31 +823,13 @@ function closeModal(e){
     setOnceMode('exact');
   }
 }
-
 function setOnceMode(mode){
   document.querySelectorAll('#once-mode .mode-btn').forEach((b,i)=>b.classList.toggle('active',['exact','after'][i]===mode));
   document.getElementById('once-exact').style.display=mode==='exact'?'':'none';
   document.getElementById('once-after').style.display=mode==='after'?'':'none';
 }
-
-function toggleCyclic(){
-  const on=document.getElementById('inp-cyclic').checked;
-  document.getElementById('once-mode').style.display=on?'none':'';
-  document.getElementById('cyclic-mode').style.display=on?'':'none';
-}
-
-function toggleForOther(){
-  const on=document.getElementById('inp-for-other').checked;
-  document.getElementById('target-section').style.display=on?'':'none';
-  if(!on){document.getElementById('inp-target').value='';hideTargetSuggestions()}
-}
-
-const knownUsers=[
-  {% for u in known_users %}
-  {username:"{{u.username}}",name:"{{u.first_name}}"}{% if not loop.last %},{% endif %}
-  {% endfor %}
-];
-
+function toggleCyclic(){ const on=document.getElementById('inp-cyclic').checked; document.getElementById('once-mode').style.display=on?'none':''; document.getElementById('cyclic-mode').style.display=on?'':'none'; }
+function toggleForOther(){ const on=document.getElementById('inp-for-other').checked; document.getElementById('target-section').style.display=on?'':'none'; if(!on){document.getElementById('inp-target').value=''; hideTargetSuggestions()} }
 function onTargetInput(){
   const val=document.getElementById('inp-target').value.replace(/^@/,'').toLowerCase();
   const box=document.getElementById('target-suggestions');
@@ -301,76 +839,35 @@ function onTargetInput(){
   box.innerHTML=matches.map(u=>`<div onclick="selectTarget('${u.username}')">@${u.username}${u.name?' ('+u.name+')':''}</div>`).join('');
   box.classList.add('show');
 }
-
-function selectTarget(username){
-  document.getElementById('inp-target').value='@'+username;
-  hideTargetSuggestions();
-}
-
-function hideTargetSuggestions(){
-  document.getElementById('target-suggestions').classList.remove('show');
-}
-
+function selectTarget(username){ document.getElementById('inp-target').value='@'+username; hideTargetSuggestions(); }
+function hideTargetSuggestions(){ document.getElementById('target-suggestions').classList.remove('show'); }
 async function addReminder(){
-  const text=document.getElementById('inp-text').value.trim();
-  if(!text)return;
+  const text=document.getElementById('inp-text').value.trim(); if(!text)return;
   const cyclic=document.getElementById('inp-cyclic').checked;
   const forOther=document.getElementById('inp-for-other').checked;
   const targetUsername=forOther?document.getElementById('inp-target').value.trim():'';
-  const fd=new FormData();
-  fd.append('text',text);
-  if(targetUsername)fd.append('target_username',targetUsername);
-
+  const fd=new FormData(); fd.append('text',text); if(targetUsername)fd.append('target_username',targetUsername);
   if(cyclic){
-    const d=document.getElementById('inp-c-date').value;
-    const t=document.getElementById('inp-c-time').value;
-    if(!d||!t)return;
-    fd.append('mode','cyclic');
-    fd.append('date',d);
-    fd.append('time',t);
+    const d=document.getElementById('inp-c-date').value; const t=document.getElementById('inp-c-time').value; if(!d||!t)return;
+    fd.append('mode','cyclic'); fd.append('date',d); fd.append('time',t);
     const intD=parseInt(document.getElementById('inp-int-d').value)||0;
     const intH=parseInt(document.getElementById('inp-int-h').value)||0;
     const intM=parseInt(document.getElementById('inp-int-m').value)||0;
-    fd.append('interval_days',intD);
-    fd.append('interval_hours',intH);
-    fd.append('interval_minutes',intM);
+    fd.append('interval_days',intD); fd.append('interval_hours',intH); fd.append('interval_minutes',intM);
   }else{
     const exactVisible=document.getElementById('once-exact').style.display!=='none';
-    if(exactVisible){
-      const d=document.getElementById('inp-date').value;
-      const t=document.getElementById('inp-time-at').value;
-      if(!d||!t)return;
-      fd.append('mode','exact');
-      fd.append('date',d);
-      fd.append('time',t);
-    }else{
-      const aD=parseInt(document.getElementById('inp-aft-d').value)||0;
-      const aH=parseInt(document.getElementById('inp-aft-h').value)||0;
-      const aM=parseInt(document.getElementById('inp-aft-m').value)||0;
-      if(aD+aH+aM===0)return;
-      fd.append('mode','after');
-      fd.append('after_days',aD);
-      fd.append('after_hours',aH);
-      fd.append('after_minutes',aM);
-    }
+    if(exactVisible){ const d=document.getElementById('inp-date').value; const t=document.getElementById('inp-time-at').value; if(!d||!t)return; fd.append('mode','exact'); fd.append('date',d); fd.append('time',t); }
+    else { const aD=parseInt(document.getElementById('inp-aft-d').value)||0; const aH=parseInt(document.getElementById('inp-aft-h').value)||0; const aM=parseInt(document.getElementById('inp-aft-m').value)||0; if(aD+aH+aM===0)return; fd.append('mode','after'); fd.append('after_days',aD); fd.append('after_hours',aH); fd.append('after_minutes',aM); }
   }
-
-  await fetch('/reminders/add',{method:'POST',body:fd});
-  location.reload();
+  await fetch('/reminders/add',{method:'POST',body:fd}); location.reload();
 }
-
-async function delReminder(id){
-  await fetch('/reminders/delete/'+id,{method:'POST'});
-  location.reload();
-}
-
+async function delReminder(id){ await fetch('/reminders/delete/'+id,{method:'POST'}); location.reload(); }
 function showConfirmDelAll(){document.getElementById('confirm-overlay').classList.add('show')}
 function hideConfirmDelAll(){document.getElementById('confirm-overlay').classList.remove('show')}
+async function delAll(){ await fetch('/reminders/deleteall',{method:'POST'}); location.reload(); }
 
-async function delAll(){
-  await fetch('/reminders/deleteall',{method:'POST'});
-  location.reload();
-}
+// init
+initCal(); updateFab();
 </script>
 </body>
 </html>

@@ -97,6 +97,24 @@ def schedule_reminder(reminder_id: int, remind_at: datetime, bot, scheduler):
     )
 
 
+def schedule_calendar_event(event_id: int, remind_at: datetime, bot, scheduler):
+    from apscheduler.triggers.date import DateTrigger
+    loop = asyncio.get_event_loop()
+    scheduler.add_job(
+        _fire_calendar_sync,
+        trigger=DateTrigger(run_date=remind_at),
+        id=f"calendar_{event_id}",
+        replace_existing=True,
+        args=[event_id, bot, scheduler, loop],
+    )
+
+
+def _fire_calendar_sync(event_id: int, bot, scheduler, loop):
+    asyncio.run_coroutine_threadsafe(
+        _fire_calendar_event(event_id, bot, scheduler), loop
+    )
+
+
 def _fire_reminder_sync(reminder_id: int, bot, scheduler, loop):
     asyncio.run_coroutine_threadsafe(
         _fire_reminder(reminder_id, bot, scheduler), loop
@@ -148,3 +166,64 @@ async def _fire_reminder(reminder_id: int, bot, scheduler):
         schedule_reminder(reminder_id, next_time, bot, scheduler)
     else:
         await db.delete_reminder(reminder_id)
+
+
+async def _fire_calendar_event(event_id: int, bot, scheduler):
+    import db
+    ev = await db.get_calendar_event_by_id(event_id)
+    if not ev:
+        logger.warning("Calendar event %s not found", event_id)
+        return
+    owner_id = await db.get_owner_id()
+    if not owner_id:
+        logger.warning("Owner ID not found in DB")
+        return
+    target_chat_id = ev.get('target_chat_id') or owner_id
+    is_other = target_chat_id != owner_id
+
+    event_dt_str = f"{ev['event_date']} {ev['event_time']}"
+    title = ev['title']
+    desc = ev.get('description') or ""
+    offset = ev.get('remind_offset_minutes', 0) or 0
+
+    if offset == 0:
+        when_txt = f"сейчас ({event_dt_str})"
+    else:
+        h = offset // 60
+        m = offset % 60
+        parts = []
+        if h:
+            parts.append(f"{h}ч")
+        if m:
+            parts.append(f"{m}м")
+        when_txt = f"через {' '.join(parts)} до события" if False else f"напоминание: событие в {event_dt_str} (за {' '.join(parts)} до)"
+        # Simplify: show offset
+
+    prefix = "📅 Напоминание о событии"
+    body = f"{prefix}:\n<b>{title}</b>\n📆 {event_dt_str}"
+    if desc:
+        body += f"\n📝 {desc}"
+    if offset:
+        h = offset // 60; m = offset % 60
+        off_str = f"{h}ч {m}м" if h and m else (f"{h}ч" if h else f"{m}м")
+        body += f"\n⏰ За {off_str} до события"
+
+    try:
+        await bot.send_message(target_chat_id, body, parse_mode="HTML")
+        logger.info("Calendar event %s sent to %s", event_id, target_chat_id)
+    except Exception as e:
+        logger.error("Failed to send calendar event %s: %s", event_id, e)
+        try:
+            await bot.send_message(owner_id, f"❌ Не удалось доставить событие календаря: {e}")
+        except Exception:
+            pass
+        return
+    if is_other:
+        try:
+            await bot.send_message(owner_id, f"✅ Событие доставлено пользователю: {title}")
+        except Exception:
+            pass
+    # calendar events are one-time, no reschedule - keep record but inactive? we keep it active for calendar view
+    # Optionally mark as done but keep visible; do not delete. We just unschedule.
+    # If you want to delete after firing, uncomment:
+    # await db.delete_calendar_event(event_id)

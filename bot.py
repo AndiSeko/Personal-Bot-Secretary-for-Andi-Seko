@@ -38,6 +38,20 @@ async def load_reminders(bot: Bot):
         utils.schedule_reminder(r['id'], remind_at, bot, scheduler)
 
 
+async def load_calendar_events(bot: Bot):
+    events = await db.get_all_calendar_events()
+    now = datetime.now(utils.tz)
+    for ev in events:
+        try:
+            remind_at = utils.tz.localize(datetime.strptime(ev['remind_at'], "%Y-%m-%d %H:%M:%S"))
+        except Exception:
+            continue
+        if remind_at < now:
+            # don't delete past events - keep them visible but don't schedule
+            continue
+        utils.schedule_calendar_event(ev['id'], remind_at, bot, scheduler)
+
+
 class IsOwner(Filter):
     async def __call__(self, message: Message) -> bool:
         return config.OWNER_ID is not None and message.from_user.id == config.OWNER_ID
@@ -359,6 +373,7 @@ async def on_startup(bot: Bot):
         )
 
     await load_reminders(bot)
+    await load_calendar_events(bot)
 
     ai.init()
 

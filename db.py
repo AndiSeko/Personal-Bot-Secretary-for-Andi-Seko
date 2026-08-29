@@ -86,9 +86,35 @@ async def init_db():
                     updated_at TEXT DEFAULT (now()::text)
                 );
             """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS calendar_events (
+                    id SERIAL PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    description TEXT DEFAULT '',
+                    event_date TEXT NOT NULL,
+                    event_time TEXT NOT NULL,
+                    remind_offset_minutes INTEGER DEFAULT 0,
+                    remind_at TEXT NOT NULL,
+                    color TEXT DEFAULT '#5b7fff',
+                    target_chat_id BIGINT,
+                    is_active INTEGER DEFAULT 1,
+                    created_at TEXT DEFAULT (now()::text)
+                );
+            """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS app_settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL,
+                    updated_at TEXT DEFAULT (now()::text)
+                );
+            """)
             # Ensure target_chat_id column exists (for old DBs)
             try:
                 await conn.execute("ALTER TABLE reminders ADD COLUMN IF NOT EXISTS target_chat_id BIGINT")
+            except Exception:
+                pass
+            try:
+                await conn.execute("ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS target_chat_id BIGINT")
             except Exception:
                 pass
         return
@@ -133,6 +159,24 @@ async def init_db():
                 first_name TEXT DEFAULT '',
                 updated_at TEXT DEFAULT (datetime('now'))
             );
+            CREATE TABLE IF NOT EXISTS calendar_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT DEFAULT '',
+                event_date TEXT NOT NULL,
+                event_time TEXT NOT NULL,
+                remind_offset_minutes INTEGER DEFAULT 0,
+                remind_at TEXT NOT NULL,
+                color TEXT DEFAULT '#5b7fff',
+                target_chat_id INTEGER,
+                is_active INTEGER DEFAULT 1,
+                created_at TEXT DEFAULT (datetime('now'))
+            );
+            CREATE TABLE IF NOT EXISTS app_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TEXT DEFAULT (datetime('now'))
+            );
         """)
         await db.commit()
 
@@ -145,10 +189,72 @@ async def migrate_db():
                 await conn.execute("ALTER TABLE reminders ADD COLUMN IF NOT EXISTS target_chat_id BIGINT")
             except Exception:
                 pass
+            try:
+                await conn.execute("""
+                    CREATE TABLE IF NOT EXISTS calendar_events (
+                        id SERIAL PRIMARY KEY,
+                        title TEXT NOT NULL,
+                        description TEXT DEFAULT '',
+                        event_date TEXT NOT NULL,
+                        event_time TEXT NOT NULL,
+                        remind_offset_minutes INTEGER DEFAULT 0,
+                        remind_at TEXT NOT NULL,
+                        color TEXT DEFAULT '#5b7fff',
+                        target_chat_id BIGINT,
+                        is_active INTEGER DEFAULT 1,
+                        created_at TEXT DEFAULT (now()::text)
+                    );
+                """)
+            except Exception:
+                pass
+            try:
+                await conn.execute("""
+                    CREATE TABLE IF NOT EXISTS app_settings (
+                        key TEXT PRIMARY KEY,
+                        value TEXT NOT NULL,
+                        updated_at TEXT DEFAULT (now()::text)
+                    );
+                """)
+            except Exception:
+                pass
+            try:
+                await conn.execute("ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS target_chat_id BIGINT")
+            except Exception:
+                pass
         return
     async with _aiosqlite.connect(DB_PATH) as db:
         try:
             await db.execute("ALTER TABLE reminders ADD COLUMN target_chat_id INTEGER")
+            await db.commit()
+        except Exception:
+            pass
+        try:
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS calendar_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    description TEXT DEFAULT '',
+                    event_date TEXT NOT NULL,
+                    event_time TEXT NOT NULL,
+                    remind_offset_minutes INTEGER DEFAULT 0,
+                    remind_at TEXT NOT NULL,
+                    color TEXT DEFAULT '#5b7fff',
+                    target_chat_id INTEGER,
+                    is_active INTEGER DEFAULT 1,
+                    created_at TEXT DEFAULT (datetime('now'))
+                );
+            """)
+            await db.commit()
+        except Exception:
+            pass
+        try:
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS app_settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL,
+                    updated_at TEXT DEFAULT (datetime('now'))
+                );
+            """)
             await db.commit()
         except Exception:
             pass
@@ -381,3 +487,121 @@ async def get_all_known_users() -> list[dict]:
         async with db.execute("SELECT * FROM known_users ORDER BY updated_at DESC") as cursor:
             rows = await cursor.fetchall()
             return [dict(r) for r in rows]
+
+
+# ─── Calendar Events ───
+
+async def add_calendar_event(title: str, description: str, event_date: str, event_time: str, remind_offset_minutes: int, remind_at: str, color: str = "#5b7fff", target_chat_id: int | None = None) -> int:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "INSERT INTO calendar_events (title, description, event_date, event_time, remind_offset_minutes, remind_at, color, target_chat_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id",
+                title, description, event_date, event_time, remind_offset_minutes, remind_at, color, target_chat_id,
+            )
+            return row["id"]
+    async with _aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "INSERT INTO calendar_events (title, description, event_date, event_time, remind_offset_minutes, remind_at, color, target_chat_id) VALUES (?,?,?,?,?,?,?,?)",
+            (title, description, event_date, event_time, remind_offset_minutes, remind_at, color, target_chat_id),
+        )
+        await db.commit()
+        return cursor.lastrowid
+
+
+async def get_all_calendar_events() -> list[dict]:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch("SELECT * FROM calendar_events WHERE is_active=1 ORDER BY event_date, event_time")
+            return [dict(r) for r in rows]
+    async with _aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = _aiosqlite.Row
+        async with db.execute("SELECT * FROM calendar_events WHERE is_active=1 ORDER BY event_date, event_time") as cursor:
+            rows = await cursor.fetchall()
+            return [dict(r) for r in rows]
+
+
+async def get_calendar_event_by_id(event_id: int) -> dict | None:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT * FROM calendar_events WHERE id=$1", event_id)
+            return dict(row) if row else None
+    async with _aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = _aiosqlite.Row
+        async with db.execute("SELECT * FROM calendar_events WHERE id=?", (event_id,)) as cursor:
+            row = await cursor.fetchone()
+            return dict(row) if row else None
+
+
+async def update_calendar_event(event_id: int, title: str, description: str, event_date: str, event_time: str, remind_offset_minutes: int, remind_at: str, color: str, target_chat_id: int | None = None):
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute(
+                "UPDATE calendar_events SET title=$1, description=$2, event_date=$3, event_time=$4, remind_offset_minutes=$5, remind_at=$6, color=$7, target_chat_id=$8 WHERE id=$9",
+                title, description, event_date, event_time, remind_offset_minutes, remind_at, color, target_chat_id, event_id,
+            )
+        return
+    async with _aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE calendar_events SET title=?, description=?, event_date=?, event_time=?, remind_offset_minutes=?, remind_at=?, color=?, target_chat_id=? WHERE id=?",
+            (title, description, event_date, event_time, remind_offset_minutes, remind_at, color, target_chat_id, event_id),
+        )
+        await db.commit()
+
+
+async def delete_calendar_event(event_id: int) -> bool:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            res = await conn.execute("DELETE FROM calendar_events WHERE id=$1", event_id)
+            return res.split()[-1] != "0"
+    async with _aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute("DELETE FROM calendar_events WHERE id=?", (event_id,))
+        await db.commit()
+        return cursor.rowcount > 0
+
+
+# ─── App Settings (for theme etc) ───
+
+async def get_setting(key: str) -> str | None:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT value FROM app_settings WHERE key=$1", key)
+            return row["value"] if row else None
+    async with _aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT value FROM app_settings WHERE key=?", (key,)) as cursor:
+            row = await cursor.fetchone()
+            return row[0] if row else None
+
+
+async def set_setting(key: str, value: str):
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute(
+                "INSERT INTO app_settings (key, value, updated_at) VALUES ($1,$2,now()::text) ON CONFLICT (key) DO UPDATE SET value=$2, updated_at=now()::text",
+                key, value,
+            )
+        return
+    async with _aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "INSERT OR REPLACE INTO app_settings (key, value, updated_at) VALUES (?,?,datetime('now'))",
+            (key, value),
+        )
+        await db.commit()
+
+
+async def get_all_settings() -> dict:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch("SELECT key, value FROM app_settings")
+            return {r["key"]: r["value"] for r in rows}
+    async with _aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT key, value FROM app_settings") as cursor:
+            rows = await cursor.fetchall()
+            return {r[0]: r[1] for r in rows}
