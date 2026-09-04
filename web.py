@@ -95,7 +95,7 @@ async def index(request: Request):
     if not tg_auth and not cookie_auth:
         if init_data:
             return HTMLResponse("<html><body style='background:#1a1a2e;color:#e0e0e0;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif'><div style='text-align:center'><h2>Доступ запрещён</h2><p style='color:#6b7280;margin-top:8px'>Этот кабинет только для владельца</p></div></body></html>")
-        return templates.TemplateResponse("login.html", {"request": request, "error": False})
+        return templates.TemplateResponse(request, "login.html", {"request": request, "error": False})
 
     reminders = await db.get_all_reminders()
     messages = await db.get_messages(limit=50)
@@ -164,7 +164,7 @@ async def index(request: Request):
         except:
             theme = None
 
-    return templates.TemplateResponse("index.html", {
+    return templates.TemplateResponse(request, "index.html", {
         "request": request,
         "reminders": reminders,
         "messages": messages,
@@ -188,7 +188,7 @@ async def login(request: Request, password: str = Form(...)):
         response = RedirectResponse(url="/", status_code=303)
         response.set_cookie("session", WEB_PASSWORD, max_age=86400 * 30)
         return response
-    return templates.TemplateResponse("login.html", {"request": request, "error": True})
+    return templates.TemplateResponse(request, "login.html", {"request": request, "error": True})
 
 
 @app.get("/logout")
