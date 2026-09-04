@@ -659,7 +659,7 @@ function loadTheme(){
   applyTheme(t);
   return t;
 }
-let currentTheme=loadTheme();
+let currentTheme = null;
 function updateModeUI(){
   const sw=document.getElementById('theme-mode-switch');
   const label=document.getElementById('theme-mode-label');
@@ -1083,6 +1083,7 @@ function showConfirmDelAll(){document.getElementById('confirm-overlay').classLis
 function hideConfirmDelAll(){document.getElementById('confirm-overlay').classList.remove('show')}
 async function delAll(){ await fetch('/reminders/deleteall',{method:'POST'}); location.reload(); }
 
+try{ currentTheme = loadTheme(); }catch(e){ console.error('loadTheme error', e); currentTheme = {...THEMES.aqua}; try{ applyTheme(currentTheme); }catch(_){} }
 window.onerror = function(msg, src, line, col, err){
   const el=document.getElementById('js-error');
   if(el){ el.style.display='block'; el.textContent='JS error: '+msg+' ('+line+':'+col+')'; }
