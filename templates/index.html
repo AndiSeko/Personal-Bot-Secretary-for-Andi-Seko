@@ -49,25 +49,9 @@ body{
 body::before{
   content:'';
   position:fixed; inset:0; pointer-events:none; z-index:-2;
-  background:
-    radial-gradient(ellipse 420px 380px at 15% 12%, rgba(255,255,255,0.45) 0%, transparent 70%),
-    radial-gradient(ellipse 520px 420px at 85% 18%, rgba(91,127,255,0.12) 0%, transparent 68%),
-    radial-gradient(ellipse 700px 500px at 50% 95%, rgba(0,212,255,0.10) 0%, transparent 70%);
-  opacity: calc(1 - var(--aero-bg-overlay));
+  background: radial-gradient(ellipse 600px 320px at 50% 0%, rgba(255,255,255,0.35) 0%, transparent 70%);
+  opacity: calc(1 - var(--aero-bg-overlay) * 0.6);
 }
-.aero-bubbles{position:fixed; inset:0; pointer-events:none; z-index:-1; overflow:hidden}
-.aero-bubbles span{
-  position:absolute; border-radius:50%;
-  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.5) 28%, rgba(150,210,255,0.22) 62%, rgba(91,127,255,0.12) 100%);
-  border:1px solid rgba(255,255,255,0.7);
-  box-shadow: inset 0 8px 16px rgba(255,255,255,0.85), inset 0 -6px 12px rgba(91,127,255,0.12), 0 8px 24px rgba(91,127,255,0.10);
-  backdrop-filter: blur(2px);
-}
-.b1{width:140px;height:140px; left:-20px; top:60px; opacity:.55}
-.b2{width:90px;height:90px; right:12px; top:130px; opacity:.45}
-.b3{width:200px;height:200px; left:32%; top:340px; opacity:.22}
-.b4{width:120px;height:120px; right:-18px; top:52%; opacity:.35}
-.b5{width:70px;height:70px; left:18%; bottom:120px; opacity:.4}
 
 /* header */
 .aero-header{
@@ -88,6 +72,8 @@ body::before{
   box-shadow: 0 4px 14px rgba(91,127,255,0.45), inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -2px 6px rgba(0,0,0,0.15);
   position:relative; overflow:hidden;
 }
+.aero-logo-icon img{width:100%; height:100%; object-fit:cover; border-radius:12px; display:block}
+.aero-logo-icon.has-img{background:none; box-shadow:0 4px 14px var(--aero-shadow), inset 0 1px 0 rgba(255,255,255,0.22); border:1px solid var(--aero-border)}
 .aero-logo-icon::after{
   content:''; position:absolute; top:2px; left:4px; right:10px; height:14px;
   background: linear-gradient(180deg, rgba(255,255,255,0.75) 0%, transparent 100%);
@@ -189,6 +175,8 @@ body::before{
 .cal-wrap{padding:0 0 10px; width:100%; min-width:0; overflow:hidden}
 .cal-header{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; min-width:0}
 .cal-title{font-size:clamp(15px, 4vw, 18px); font-weight:800; letter-spacing:-0.3px; display:flex; align-items:center; gap:6px; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.cal-title-block{display:flex; align-items:center; gap:6px; background: linear-gradient(180deg, var(--aero-glass-strong) 0%, var(--aero-glass) 100%); border:1px solid var(--aero-border); padding:6px 12px; border-radius:14px; box-shadow:0 2px 10px var(--aero-shadow), inset 0 1px 0 rgba(255,255,255,0.22); color:var(--aero-text); backdrop-filter: blur(8px);}
+.cal-action-btn{color:var(--aero-text) !important;}
 .cal-nav{display:flex; gap:6px; flex-shrink:0}
 .cal-nav button{
   width:36px;height:36px; border-radius:12px; border:1px solid var(--aero-border);
@@ -357,16 +345,28 @@ input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-c
 .bg-preview.has-image{color:#fff; text-shadow:0 1px 4px rgba(0,0,0,0.6)}
 .bg-preview span{background:rgba(255,255,255,0.85); padding:4px 8px; border-radius:8px}
 .bg-preview.has-image span{background:rgba(0,0,0,0.35); backdrop-filter:blur(4px)}
+.logo-opt{width:38px;height:38px; border-radius:10px; border:1px solid var(--aero-border); background:var(--aero-glass); display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer; transition:transform .12s, box-shadow .12s}
+.logo-opt.active{outline:2px solid var(--aero-primary); outline-offset:1px; transform:scale(1.05)}
+/* mobile perf: keep animations but cheaper */
+@media (max-width: 768px), (pointer: coarse) {
+  :root{ --aero-blur:10px; }
+  .aero-header, .glass-card, .cal-grid, .modal, .aero-tab { backdrop-filter: blur(8px) saturate(1.1) !important; -webkit-backdrop-filter: blur(8px) saturate(1.1) !important; }
+  .glass-card, .cal-day, .modal, .aero-header { will-change: transform; transform: translateZ(0); contain: paint; }
+  .glass-card, .cal-grid, .modal { box-shadow: 0 4px 16px var(--aero-shadow) !important; }
+  .content, .panel { will-change: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
 </style>
 </head>
 <body>
-<div class="aero-bubbles"><span class="b1"></span><span class="b2"></span><span class="b3"></span><span class="b4"></span><span class="b5"></span></div>
 <div class="app-shell">
 
 <div class="aero-header">
   <div class="aero-header-top">
     <div class="aero-logo">
-      <div class="aero-logo-icon">☁️</div>
+      <div class="aero-logo-icon" id="aero-logo-icon">☁️</div>
       <div style="min-width:0">
         <h1>Secretary</h1>
         <p>Frutiger Aero • Кабинет <small style="opacity:.6; font-size:9px; margin-left:4px">{{git_commit}}</small></p>
@@ -397,7 +397,7 @@ input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-c
   <div id="panel-calendar" class="panel active">
     <div class="cal-wrap">
       <div class="cal-header">
-        <div class="cal-title"><span>🫧</span> <b id="cal-month-label">—</b></div>
+        <div class="cal-title cal-title-block"><span>🫧</span> <b id="cal-month-label">—</b></div>
         <div class="cal-nav">
           <button onclick="calShift(-1)">‹</button>
           <button onclick="calToday()">●</button>
@@ -409,8 +409,8 @@ input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-c
         <div class="cal-days" id="cal-days"></div>
       </div>
       <div style="display:flex; gap:8px; margin-top:10px; min-width:0">
-        <button class="glass-card" style="flex:1; min-width:0; padding:10px; font-weight:800; font-size:12px; cursor:pointer; text-align:center; border-radius:14px" onclick="openDayModal(calSelectedDate)">+ Событие на выбранный день</button>
-        <button class="glass-card" style="padding:10px 14px; font-weight:800; font-size:12px; cursor:pointer; border-radius:14px; flex-shrink:0" onclick="openEventModal(calSelectedDate)">⚡ Быстро</button>
+        <button class="glass-card cal-action-btn" style="flex:1; min-width:0; padding:10px; font-weight:800; font-size:12px; cursor:pointer; text-align:center; border-radius:14px; color:var(--aero-text)" onclick="openDayModal(calSelectedDate)">+ Событие на выбранный день</button>
+        <button class="glass-card cal-action-btn" style="padding:10px 14px; font-weight:800; font-size:12px; cursor:pointer; border-radius:14px; flex-shrink:0; color:var(--aero-text)" onclick="openEventModal(calSelectedDate)">⚡ Быстро</button>
       </div>
       <div id="cal-legend" style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap; font-size:10px; font-weight:700; color:var(--aero-hint)">
         <span style="display:flex;align-items:center;gap:4px"><span class="card-color-dot" style="background:#5b7fff"></span> События</span>
@@ -521,6 +521,18 @@ input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-c
       <div class="toggle-switch" id="theme-mode-switch" onclick="toggleThemeMode()"></div>
     </div>
 
+    <div class="theme-section">
+      <h4>🔖 Иконка логотипа</h4>
+      <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin-top:6px" id="logo-emoji-grid"></div>
+      <label>Своя картинка (URL)</label>
+      <input type="url" id="th-logo-url" placeholder="https://example.com/icon.png">
+      <div style="display:flex; gap:6px; margin-top:6px">
+        <input type="file" id="th-logo-file" accept="image/*" style="flex:1; font-size:12px; padding:8px; border:1px solid var(--aero-border); border-radius:10px; background:var(--aero-glass); color:var(--aero-text)">
+        <button type="button" onclick="clearLogo()" style="padding:8px 10px; border-radius:10px; border:1px solid rgba(255,71,87,0.2); background:rgba(255,71,87,0.08); color:var(--aero-danger); font-weight:800; font-size:12px; cursor:pointer">✕</button>
+      </div>
+      <div style="font-size:10px; color:var(--aero-hint); margin-top:4px; font-weight:600">Эмодзи — быстро, картинка по URL/файлу — сохраняется локально (dataURL, не грузит хост).</div>
+    </div>
+
     <label>Пресеты Frutiger Aero</label>
     <div class="theme-presets" id="theme-presets"></div>
 
@@ -569,6 +581,21 @@ input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-c
       <input type="range" id="th-blur" min="8" max="24" step="1" style="width:100%; margin-top:6px">
     </div>
 
+    <div class="theme-section">
+      <h4>💾 Сохранённые темы (локально)</h4>
+      <div style="display:flex; gap:6px; margin-top:6px">
+        <input type="text" id="th-save-name" placeholder="Название темы" style="flex:1">
+        <button type="button" onclick="saveCurrentTheme()" style="padding:10px 12px; border-radius:10px; border:1px solid var(--aero-border); background:var(--aero-primary); color:#fff; font-weight:800; cursor:pointer">Сохранить</button>
+      </div>
+      <div id="saved-themes-list" style="margin-top:8px; display:flex; flex-direction:column; gap:6px"></div>
+      <div style="display:flex; gap:6px; margin-top:6px">
+        <button type="button" onclick="exportThemes()" style="flex:1; padding:8px; border-radius:10px; border:1px solid var(--aero-border); background:var(--aero-glass); color:var(--aero-text); font-weight:700; cursor:pointer">Экспорт</button>
+        <button type="button" onclick="importThemes()" style="flex:1; padding:8px; border-radius:10px; border:1px solid var(--aero-border); background:var(--aero-glass); color:var(--aero-text); font-weight:700; cursor:pointer">Импорт</button>
+        <input type="file" id="th-import-file" accept=".json" style="display:none" onchange="handleImportFile(event)">
+      </div>
+      <div style="font-size:10px; color:var(--aero-hint); margin-top:4px; font-weight:600">Темы сохраняются в браузере (localStorage) и переживают перезагрузку. Экспорт — файл для бэкапа.</div>
+    </div>
+
     <div class="modal-btns"><button class="btn-cancel" onclick="closeThemeModal()">Закрыть</button><button class="btn-ok" onclick="applyThemeCustom()">Применить</button></div>
     <button class="danger-btn" onclick="resetTheme()">Сбросить к Aqua</button>
   </div>
@@ -593,11 +620,47 @@ function rgbaAlpha(rgba, a){ // rgba(...) -> replace alpha
 
 // theme handling - FULL
 const THEMES={
-  aqua:{name:'Aqua', mode:'light', primary:'#5b7fff', accent:'#00d4ff', bgStart:'#a0d8ef', bgEnd:'#e0f7ff', bgImage:'', bgOverlay:0, text:'#1a2a4a', hint:'#6a8aaa', glass:'#ffffff', glassStrong:'#ffffff', border:'#ffffff', shadow:'#1f2687', alpha:0.62, radius:20, blur:16, header:'#ffffff'},
-  sunset:{name:'Sunset', mode:'light', primary:'#ff7e5f', accent:'#feb47b', bgStart:'#ffd194', bgEnd:'#ff8a9b', bgImage:'', bgOverlay:0, text:'#3a1f1f', hint:'#8a6a5a', glass:'#ffffff', glassStrong:'#ffffff', border:'#ffffff', shadow:'#7a3a1f', alpha:0.62, radius:20, blur:16, header:'#ffffff'},
-  aurora:{name:'Aurora', mode:'light', primary:'#a18cd1', accent:'#fbc2eb', bgStart:'#c2e9fb', bgEnd:'#e0c3fc', bgImage:'', bgOverlay:0, text:'#2a1f3a', hint:'#7a6a8a', glass:'#ffffff', glassStrong:'#ffffff', border:'#ffffff', shadow:'#3a2a5a', alpha:0.60, radius:20, blur:16, header:'#ffffff'},
-  midnight:{name:'Midnight', mode:'dark', primary:'#667eea', accent:'#764ba2', bgStart:'#0f0f1e', bgEnd:'#1e2a4a', bgImage:'', bgOverlay:0, text:'#e6e9ff', hint:'#9aa8c7', glass:'#1e2340', glassStrong:'#252a4a', border:'#2a2f55', shadow:'#000000', alpha:0.55, radius:20, blur:16, header:'#1a1f3a'},
-  forest:{name:'Forest', mode:'light', primary:'#2ed573', accent:'#7bed9f', bgStart:'#c3f0ca', bgEnd:'#e6f9e6', bgImage:'', bgOverlay:0, text:'#1a2a1a', hint:'#5a7a5a', glass:'#ffffff', glassStrong:'#ffffff', border:'#ffffff', shadow:'#1a3a1f', alpha:0.62, radius:20, blur:16, header:'#ffffff'},
+  aqua:{name:'Aqua', mode:'light', primary:'#5b7fff', accent:'#00d4ff', bgStart:'#a0d8ef', bgEnd:'#e0f7ff', bgImage:'', bgOverlay:0, text:'#1a2a4a', hint:'#6a8aaa', glass:'#ffffff', glassStrong:'#ffffff', border:'#ffffff', shadow:'#1f2687', alpha:0.62, radius:20, blur:16, header:'#ffffff', logo:'☁️'},
+  sunset:{name:'Sunset', mode:'light', primary:'#ff7e5f', accent:'#feb47b', bgStart:'#ffd194', bgEnd:'#ff8a9b', bgImage:'', bgOverlay:0, text:'#3a1f1f', hint:'#8a6a5a', glass:'#ffffff', glassStrong:'#ffffff', border:'#ffffff', shadow:'#7a3a1f', alpha:0.62, radius:20, blur:16, header:'#ffffff', logo:'☁️'},
+  aurora:{name:'Aurora', mode:'light', primary:'#a18cd1', accent:'#fbc2eb', bgStart:'#c2e9fb', bgEnd:'#e0c3fc', bgImage:'', bgOverlay:0, text:'#2a1f3a', hint:'#7a6a8a', glass:'#ffffff', glassStrong:'#ffffff', border:'#ffffff', shadow:'#3a2a5a', alpha:0.60, radius:20, blur:16, header:'#ffffff', logo:'☁️'},
+  midnight:{name:'Midnight', mode:'dark', primary:'#667eea', accent:'#764ba2', bgStart:'#0f0f1e', bgEnd:'#1e2a4a', bgImage:'', bgOverlay:0, text:'#e6e9ff', hint:'#9aa8c7', glass:'#1e2340', glassStrong:'#252a4a', border:'#2a2f55', shadow:'#000000', alpha:0.55, radius:20, blur:16, header:'#1a1f3a', logo:'☁️'},
+  forest:{name:'Forest', mode:'light', primary:'#2ed573', accent:'#7bed9f', bgStart:'#c3f0ca', bgEnd:'#e6f9e6', bgImage:'', bgOverlay:0, text:'#1a2a1a', hint:'#5a7a5a', glass:'#ffffff', glassStrong:'#ffffff', border:'#ffffff', shadow:'#1a3a1f', alpha:0.62, radius:20, blur:16, header:'#ffffff', logo:'☁️'},
+}
+const LOGO_EMOJIS=['☁️','✨','📅','🚀','💎','🌊','🔔','📝','🎨','⚡','🌟','💼'];
+function updateLogoDisplay(logo){
+  const el=document.getElementById('aero-logo-icon');
+  if(!el) return;
+  if(!logo) logo='☁️';
+  if(logo.startsWith('http') || logo.startsWith('data:')){
+    el.innerHTML=`<img src="${logo}" alt="logo">`;
+    el.classList.add('has-img');
+  } else {
+    el.textContent=logo;
+    el.classList.remove('has-img');
+  }
+}
+function renderLogoOptions(){
+  const grid=document.getElementById('logo-emoji-grid');
+  if(!grid) return;
+  const cur = (currentTheme && currentTheme.logo) || localStorage.getItem('aeroLogo') || '☁️';
+  grid.innerHTML=LOGO_EMOJIS.map(e=>`<div class="logo-opt ${e===cur?'active':''}" onclick="selectLogo('${e}')">${e}</div>`).join('');
+  const urlInput=document.getElementById('th-logo-url');
+  if(urlInput){
+    const isUrl = cur.startsWith('http') || cur.startsWith('data:');
+    urlInput.value = isUrl ? cur : '';
+  }
+}
+function selectLogo(emoji){
+  const t={...currentTheme, logo:emoji};
+  localStorage.setItem('aeroLogo', emoji);
+  applyTheme(t);
+  renderLogoOptions();
+}
+function clearLogo(){
+  const urlEl=document.getElementById('th-logo-url');
+  if(urlEl) urlEl.value='';
+  const inp=document.getElementById('th-logo-file'); if(inp) inp.value='';
+  selectLogo('☁️');
 }
 function applyTheme(t){
   // normalize missing fields from defaults
@@ -641,12 +704,15 @@ function applyTheme(t){
   }
   // persist
   localStorage.setItem('aeroTheme', JSON.stringify(t));
+  if(t.logo) localStorage.setItem('aeroLogo', t.logo);
   // server persist - but don't send huge dataURLs (local file) to server
   const toSend={...t};
-  if(toSend.bgImage && toSend.bgImage.startsWith('data:')){ toSend.bgImage=''; } // don't bloat DB with data url
+  if(toSend.bgImage && toSend.bgImage.startsWith('data:')){ toSend.bgImage=''; }
+  if(toSend.logo && toSend.logo.startsWith('data:')){ toSend.logo='☁️'; }
   fetch('/api/theme',{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(toSend)}).catch(()=>{});
   currentTheme=t;
   updateModeUI();
+  updateLogoDisplay(t.logo);
 }
 function loadTheme(){
   let t=null;
@@ -659,6 +725,10 @@ function loadTheme(){
   if(!t) t={...THEMES.aqua};
   // migration: older themes lack many fields
   t={...THEMES.aqua, ...t};
+  // logo отдельно (может быть data: url из файла)
+  const savedLogo = localStorage.getItem('aeroLogo');
+  if(savedLogo && (!t.logo || t.logo==='☁️')) t.logo = savedLogo;
+  if(!t.logo) t.logo='☁️';
   applyTheme(t);
   return t;
 }
@@ -724,6 +794,8 @@ function openThemeModal(){
   document.getElementById('th-alpha').value=currentTheme.alpha;
   document.getElementById('th-radius').value=currentTheme.radius;
   document.getElementById('th-blur').value=currentTheme.blur;
+  renderLogoOptions();
+  renderSavedThemes();
   updateModeUI();
   updateBgPreview();
   document.getElementById('theme-modal').classList.add('show');
@@ -738,6 +810,10 @@ function selectPreset(k){
     base.bgImage=currentTheme.bgImage;
     base.bgOverlay=currentTheme.bgOverlay;
   }
+  // keep custom logo
+  if(currentTheme.logo && currentTheme.logo!== '☁️'){
+    base.logo = currentTheme.logo;
+  }
   currentTheme=base;
   applyTheme(currentTheme);
   openThemeModal();
@@ -748,6 +824,14 @@ function applyThemeCustom(){
   let bgImage=urlVal;
   if(!bgImage && currentTheme.bgImage && currentTheme.bgImage.startsWith('data:')){
     bgImage=currentTheme.bgImage;
+  }
+  const logoUrl=document.getElementById('th-logo-url').value.trim();
+  let logo = logoUrl || currentTheme.logo || '☁️';
+  // если выбран эмодзи через сетку — он уже в currentTheme.logo, но URL приоритетнее если введён
+  if(logoUrl) logo = logoUrl;
+  else if(currentTheme.logo && (currentTheme.logo.startsWith('http')||currentTheme.logo.startsWith('data:')) && !logoUrl){
+    // keep data url logo if no URL input
+    logo = currentTheme.logo;
   }
   currentTheme={
     name:'Custom',
@@ -768,14 +852,79 @@ function applyThemeCustom(){
     alpha:parseFloat(document.getElementById('th-alpha').value),
     radius:parseInt(document.getElementById('th-radius').value)||20,
     blur:parseInt(document.getElementById('th-blur').value)||16,
+    logo: logo,
   };
   applyTheme(currentTheme); closeThemeModal();
 }
-function resetTheme(){ currentTheme={...THEMES.aqua}; applyTheme(currentTheme); openThemeModal(); }
+function resetTheme(){ currentTheme={...THEMES.aqua}; localStorage.removeItem('aeroLogo'); applyTheme(currentTheme); openThemeModal(); }
 function clearBgImage(){
   document.getElementById('th-bgimage').value='';
   currentTheme.bgImage='';
   updateBgPreview();
+}
+function saveCurrentTheme(){
+  const name=document.getElementById('th-save-name').value.trim() || ('Тема '+(new Date().toLocaleDateString()));
+  const list=JSON.parse(localStorage.getItem('aeroThemes')||'[]');
+  // сохраняем копию текущего состояния (из inputs если открыта модалка, иначе currentTheme)
+  let toSave;
+  try{ toSave={...currentTheme}; }catch{ toSave={...THEMES.aqua}; }
+  list.push({name, theme:toSave, at: Date.now()});
+  localStorage.setItem('aeroThemes', JSON.stringify(list));
+  document.getElementById('th-save-name').value='';
+  renderSavedThemes();
+}
+function renderSavedThemes(){
+  const cont=document.getElementById('saved-themes-list');
+  if(!cont) return;
+  const list=JSON.parse(localStorage.getItem('aeroThemes')||'[]');
+  if(!list.length){ cont.innerHTML='<div style="font-size:11px; color:var(--aero-hint); font-weight:600; text-align:center; padding:6px">Нет сохранённых тем — сохрани текущую</div>'; return; }
+  cont.innerHTML=list.map((it, idx)=>`
+    <div style="display:flex; align-items:center; gap:6px; background:var(--aero-glass); border:1px solid var(--aero-border); padding:8px 10px; border-radius:12px">
+      <div style="flex:1; min-width:0">
+        <div style="font-size:12px; font-weight:800; color:var(--aero-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis">${it.name}</div>
+        <div style="font-size:10px; color:var(--aero-hint)">${new Date(it.at).toLocaleString()} • ${it.theme.mode==='dark'?'тёмная':'светлая'}</div>
+      </div>
+      <button onclick="loadSavedTheme(${idx})" style="padding:6px 10px; border-radius:8px; border:1px solid var(--aero-border); background:var(--aero-primary); color:#fff; font-weight:800; font-size:11px; cursor:pointer">Загрузить</button>
+      <button onclick="deleteSavedTheme(${idx})" style="padding:6px 8px; border-radius:8px; border:1px solid rgba(255,71,87,0.2); background:rgba(255,71,87,0.08); color:var(--aero-danger); font-weight:800; cursor:pointer">✕</button>
+    </div>
+  `).join('');
+}
+function loadSavedTheme(idx){
+  const list=JSON.parse(localStorage.getItem('aeroThemes')||'[]');
+  const it=list[idx]; if(!it) return;
+  applyTheme(it.theme);
+  openThemeModal();
+}
+function deleteSavedTheme(idx){
+  const list=JSON.parse(localStorage.getItem('aeroThemes')||'[]');
+  list.splice(idx,1);
+  localStorage.setItem('aeroThemes', JSON.stringify(list));
+  renderSavedThemes();
+}
+function exportThemes(){
+  const list=localStorage.getItem('aeroThemes')||'[]';
+  const cur=localStorage.getItem('aeroTheme')||'{}';
+  const blob=new Blob([JSON.stringify({themes:JSON.parse(list), current:JSON.parse(cur)}, null, 2)], {type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='aero-themes.json'; a.click(); URL.revokeObjectURL(url);
+}
+function importThemes(){
+  document.getElementById('th-import-file').click();
+}
+function handleImportFile(e){
+  const f=e.target.files[0]; if(!f) return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(data.themes) localStorage.setItem('aeroThemes', JSON.stringify(data.themes));
+      if(data.current) localStorage.setItem('aeroTheme', JSON.stringify(data.current));
+      if(data.themes && !data.current && Array.isArray(data.themes) && data.themes[0]?.theme) localStorage.setItem('aeroTheme', JSON.stringify(data.themes[0].theme));
+      alert('Импортировано');
+      location.reload();
+    }catch(err){ alert('Ошибка импорта: '+err.message); }
+  };
+  reader.readAsText(f);
 }
 document.getElementById('th-bgimage')?.addEventListener('input', updateBgPreview);
 document.getElementById('th-bgfile')?.addEventListener('change', function(e){
@@ -789,6 +938,28 @@ document.getElementById('th-bgfile')?.addEventListener('change', function(e){
     document.getElementById('th-bg-preview').style.backgroundImage=`url("${currentTheme.bgImage}")`;
   };
   reader.readAsDataURL(f);
+});
+document.getElementById('th-logo-file')?.addEventListener('change', function(e){
+  const f=e.target.files[0]; if(!f) return;
+  if(f.size> 400*1024){ alert('Файл слишком большой (макс 400KB). Используй URL или сожми.'); return; }
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    const dataUrl=ev.target.result;
+    localStorage.setItem('aeroLogo', dataUrl);
+    const t={...currentTheme, logo:dataUrl};
+    applyTheme(t);
+    renderLogoOptions();
+  };
+  reader.readAsDataURL(f);
+});
+document.getElementById('th-logo-url')?.addEventListener('input', function(e){
+  const url=e.target.value.trim();
+  if(url && (url.startsWith('http')||url.startsWith('data:'))){
+    // preview via select
+    const t={...currentTheme, logo:url};
+    // не применяем сразу, только при Применить, но обновляем грид
+    renderLogoOptions();
+  }
 });
 
 // tab switching
