@@ -431,6 +431,33 @@ async def api_get_theme(request: Request):
         return JSONResponse({})
 
 
+@app.post("/api/cleanup")
+async def api_cleanup(request: Request):
+    if not check_auth(request):
+        return JSONResponse(status_code=403, content={"error":"forbidden"})
+    # удаляем просроченные одноразовые напоминания и прошедшие события
+    # также снимаем джобы планировщика если есть
+    result = await db.cleanup_expired()
+    # попытка снять джобы для удалённых (если остались)
+    if _scheduler:
+        # для надёжности: перебираем все джобы и удаляем те, у которых id соответствует удалённым?
+        # но cleanup_expired уже вернул счётчики, а id неизвестны — джобы для прошедших всё равно истекли
+        # дополнительно чистим по времени: пройдёмся по всем напоминаниям/событиям и снимем просроченные джобы
+        try:
+            for job in list(_scheduler.get_jobs()):
+                jid = job.id
+                if jid.startswith("reminder_") or jid.startswith("calendar_"):
+                    # если run_date в прошлом — удаляем (APScheduler должен сам, но на всякий)
+                    if job.next_run_time and job.next_run_time < datetime.now(utils.tz):
+                        try:
+                            _scheduler.remove_job(jid)
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+    return JSONResponse({"ok": True, "deleted": result})
+
+
 @app.post("/reminders/delete/{reminder_id}")
 async def delete_reminder(request: Request, reminder_id: int):
     if not check_auth(request):

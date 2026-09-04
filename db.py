@@ -605,3 +605,62 @@ async def get_all_settings() -> dict:
         async with db.execute("SELECT key, value FROM app_settings") as cursor:
             rows = await cursor.fetchall()
             return {r[0]: r[1] for r in rows}
+
+
+# ─── Cleanup expired (для автоочистки хоста) ───
+
+async def delete_expired_reminders(now_str: str | None = None) -> int:
+    """Удаляет одноразовые напоминания, у которых remind_at < now. Цикличные не трогает."""
+    if now_str is None:
+        from datetime import datetime as _dt
+        import pytz as _pytz, config as _cfg
+        _tz = _pytz.timezone(_cfg.TIMEZONE)
+        now_str = _dt.now(_tz).strftime("%Y-%m-%d %H:%M:%S")
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            res = await conn.execute("DELETE FROM reminders WHERE is_cyclic = 0 AND remind_at < $1", now_str)
+            try:
+                return int(res.split()[-1])
+            except Exception:
+                return 0
+    async with _aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute("DELETE FROM reminders WHERE is_cyclic = 0 AND remind_at < ?", (now_str,))
+        await db.commit()
+        return cursor.rowcount
+
+
+async def delete_expired_calendar_events(now_str: str | None = None, grace_hours: int = 0) -> int:
+    """Удаляет события календаря, у которых event_date+event_time < now - grace.
+    grace_hours=0 — сразу после наступления события, >0 — хранить N часов после."""
+    if now_str is None:
+        from datetime import datetime as _dt, timedelta as _td
+        import pytz as _pytz, config as _cfg
+        _tz = _pytz.timezone(_cfg.TIMEZONE)
+        now = _dt.now(_tz)
+        if grace_hours:
+            now = now - _td(hours=grace_hours)
+        now_str = now.strftime("%Y-%m-%d %H:%M")
+    # сравниваем как строки: event_date(YYYY-MM-DD) + ' ' + event_time(HH:MM) < now_str(YYYY-MM-DD HH:MM)
+    # берём первые 16 символов now_str для сравнения
+    cmp = now_str[:16]
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            # конкатенация в postgres: event_date || ' ' || event_time
+            res = await conn.execute("DELETE FROM calendar_events WHERE (event_date || ' ' || event_time) < $1", cmp)
+            try:
+                return int(res.split()[-1])
+            except Exception:
+                return 0
+    async with _aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute("DELETE FROM calendar_events WHERE (event_date || ' ' || event_time) < ?", (cmp,))
+        await db.commit()
+        return cursor.rowcount
+
+
+async def cleanup_expired(grace_hours: int = 0) -> dict:
+    """Комплексная очистка: напоминания + события. Возвращает счётчики."""
+    r = await delete_expired_reminders()
+    c = await delete_expired_calendar_events(grace_hours=grace_hours)
+    return {"reminders": r, "calendar_events": c}

@@ -435,7 +435,8 @@ input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-c
       </div>
       {% endfor %}
       {% if active_count > 0 %}<button class="danger-btn" onclick="showConfirmDelAll()">Удалить все напоминания</button>{% endif %}
-    {% else %}<div class="glass-card empty">Нет напоминаний — добавь первое ✨</div>{% endif %}
+      <button class="glass-card cal-action-btn" style="width:100%; margin-top:8px; padding:10px; font-weight:800; font-size:12px; cursor:pointer; text-align:center; color:var(--aero-text)" onclick="runCleanup()">🧹 Очистить просроченное</button>
+    {% else %}<div class="glass-card empty">Нет напоминаний — добавь первое ✨</div><button class="glass-card cal-action-btn" style="width:100%; margin-top:8px; padding:10px; font-weight:800; font-size:12px; cursor:pointer; text-align:center; color:var(--aero-text)" onclick="runCleanup()">🧹 Очистить просроченное</button>{% endif %}
   </div>
 
   <div id="panel-messages" class="panel">
@@ -1256,6 +1257,13 @@ async function delReminder(id){ await fetch('/reminders/delete/'+id,{method:'POS
 function showConfirmDelAll(){document.getElementById('confirm-overlay').classList.add('show')}
 function hideConfirmDelAll(){document.getElementById('confirm-overlay').classList.remove('show')}
 async function delAll(){ await fetch('/reminders/deleteall',{method:'POST'}); location.reload(); }
+async function runCleanup(){
+  if(!confirm('Удалить все прошедшие одноразовые напоминания и прошедшие события календаря?')) return;
+  const r=await fetch('/api/cleanup',{method:'POST'});
+  const j=await r.json().catch(()=>({}));
+  alert(`Готово: удалено напоминаний ${j.deleted?.reminders||0}, событий ${j.deleted?.calendar_events||0}`);
+  location.reload();
+}
 
 try{ currentTheme = loadTheme(); }catch(e){ console.error('loadTheme error', e); currentTheme = {...THEMES.aqua}; try{ applyTheme(currentTheme); }catch(_){} }
 window.onerror = function(msg, src, line, col, err){

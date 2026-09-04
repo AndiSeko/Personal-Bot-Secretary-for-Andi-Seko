@@ -47,9 +47,51 @@ async def load_calendar_events(bot: Bot):
         except Exception:
             continue
         if remind_at < now:
-            # don't delete past events - keep them visible but don't schedule
+            # просроченные события не планируем; они будут удалены автоочисткой по event_date
             continue
         utils.schedule_calendar_event(ev['id'], remind_at, bot, scheduler)
+
+
+async def auto_cleanup():
+    """Автоудаление прошедших одноразовых напоминаний и прошедших событий календаря — чтобы не засорять БД/хост."""
+    try:
+        now = datetime.now(utils.tz)
+        # — reminders: только одноразовые с remind_at в прошлом
+        rems = await db.get_all_reminders()
+        cleaned_r = 0
+        for r in rems:
+            if r.get('is_cyclic'):
+                continue
+            try:
+                dt = utils.tz.localize(datetime.strptime(r['remind_at'][:19], "%Y-%m-%d %H:%M:%S"))
+            except Exception:
+                continue
+            if dt < now:
+                try:
+                    scheduler.remove_job(f"reminder_{r['id']}")
+                except Exception:
+                    pass
+                await db.delete_reminder(r['id'])
+                cleaned_r += 1
+        # — calendar_events: по event_date + event_time
+        evs = await db.get_all_calendar_events()
+        cleaned_c = 0
+        for ev in evs:
+            try:
+                ev_dt = utils.tz.localize(datetime.strptime(f"{ev['event_date']} {ev['event_time']}", "%Y-%m-%d %H:%M"))
+            except Exception:
+                continue
+            if ev_dt < now:
+                try:
+                    scheduler.remove_job(f"calendar_{ev['id']}")
+                except Exception:
+                    pass
+                await db.delete_calendar_event(ev['id'])
+                cleaned_c += 1
+        if cleaned_r or cleaned_c:
+            logger.info("Auto-cleanup: удалено %s напоминаний, %s событий календаря", cleaned_r, cleaned_c)
+    except Exception as e:
+        logger.error("Auto-cleanup failed: %s", e)
 
 
 class IsOwner(Filter):
@@ -291,6 +333,12 @@ async def cmd_deleteall(message: Message):
     await message.answer(f"✅ Удалено напоминаний: {count}")
 
 
+@router.message(IsOwner(), Command("cleanup"))
+async def cmd_cleanup(message: Message):
+    await auto_cleanup()
+    await message.answer("🧹 Очистка выполнена: просроченные напоминания и события календаря удалены.")
+
+
 @router.message(IsNotOwner(), F.text)
 async def forward_text_to_owner(message: Message, bot: Bot):
     if config.OWNER_ID is None:
@@ -381,6 +429,7 @@ async def on_startup(bot: Bot):
             BotCommand(command="list", description="Список напоминаний"),
             BotCommand(command="delete", description="Удалить напоминание"),
             BotCommand(command="deleteall", description="Удалить все"),
+            BotCommand(command="cleanup", description="Очистить просроченное"),
             BotCommand(command="clearai", description="Очистить контекст AI"),
             BotCommand(command="app", description="Веб-кабинет"),
         ],
@@ -400,6 +449,7 @@ async def on_startup(bot: Bot):
                 BotCommand(command="list", description="Список напоминаний"),
                 BotCommand(command="delete", description="Удалить напоминание"),
                 BotCommand(command="deleteall", description="Удалить все"),
+                BotCommand(command="cleanup", description="Очистить просроченное"),
                 BotCommand(command="clearai", description="Очистить контекст AI"),
                 BotCommand(command="app", description="Веб-кабинет"),
             ],
@@ -408,11 +458,24 @@ async def on_startup(bot: Bot):
 
     await load_reminders(bot)
     await load_calendar_events(bot)
+    # разовая очистка просроченного сразу при старте
+    try:
+        await auto_cleanup()
+    except Exception as e:
+        logger.warning("Initial auto-cleanup failed: %s", e)
 
     ai.init()
 
     if not scheduler.running:
         scheduler.start()
+
+    # периодическая автоочистка: каждый час + ежедневно в 04:00
+    try:
+        scheduler.add_job(auto_cleanup, "interval", hours=1, id="auto_cleanup_hourly", replace_existing=True, max_instances=1)
+        scheduler.add_job(auto_cleanup, "cron", hour=4, minute=0, id="auto_cleanup_daily", replace_existing=True, max_instances=1)
+        logger.info("Auto-cleanup scheduled (hourly + daily 04:00)")
+    except Exception as e:
+        logger.warning("Failed to schedule auto-cleanup: %s", e)
 
     import web
     web.setup(bot, scheduler)
