@@ -12,6 +12,8 @@
   --aero-accent:#00d4ff;
   --aero-bg-start:#a0d8ef;
   --aero-bg-end:#e0f7ff;
+  --aero-bg-image:none;
+  --aero-bg-overlay:0;
   --aero-glass:rgba(255,255,255,0.62);
   --aero-glass-strong:rgba(255,255,255,0.82);
   --aero-text:#1a2a4a;
@@ -22,6 +24,7 @@
   --aero-success:#2ed573;
   --aero-card-radius:20px;
   --aero-blur:16px;
+  --aero-header-bg:linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.58) 100%);
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{-webkit-text-size-adjust:100%}
@@ -29,20 +32,26 @@ body{
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'SF Pro Display',sans-serif;
   color:var(--aero-text);
   min-height:100vh; min-height:100dvh;
-  background: linear-gradient(180deg, var(--aero-bg-start) 0%, var(--aero-bg-end) 100%);
-  background-attachment: fixed;
+  background-color: var(--aero-bg-start);
+  background-image: var(--aero-bg-image), linear-gradient(180deg, var(--aero-bg-start) 0%, var(--aero-bg-end) 100%);
+  background-size: cover, auto;
+  background-position: center, center;
+  background-attachment: fixed, fixed;
+  background-blend-mode: normal;
   overflow-x:hidden;
   padding-bottom:90px;
   position:relative;
+  display:flex; justify-content:center;
 }
-/* glossy bubbles background */
+.app-shell{width:100%; max-width:560px; min-width:0; position:relative; display:flex; flex-direction:column; min-height:100vh}
 body::before{
   content:'';
   position:fixed; inset:0; pointer-events:none; z-index:-2;
   background:
-    radial-gradient(ellipse 420px 380px at 15% 12%, rgba(255,255,255,0.9) 0%, transparent 70%),
-    radial-gradient(ellipse 520px 420px at 85% 18%, rgba(91,127,255,0.18) 0%, transparent 68%),
-    radial-gradient(ellipse 700px 500px at 50% 95%, rgba(0,212,255,0.14) 0%, transparent 70%);
+    radial-gradient(ellipse 420px 380px at 15% 12%, rgba(255,255,255,0.45) 0%, transparent 70%),
+    radial-gradient(ellipse 520px 420px at 85% 18%, rgba(91,127,255,0.12) 0%, transparent 68%),
+    radial-gradient(ellipse 700px 500px at 50% 95%, rgba(0,212,255,0.10) 0%, transparent 70%);
+  opacity: calc(1 - var(--aero-bg-overlay));
 }
 .aero-bubbles{position:fixed; inset:0; pointer-events:none; z-index:-1; overflow:hidden}
 .aero-bubbles span{
@@ -62,18 +71,18 @@ body::before{
 .aero-header{
   position:sticky; top:0; z-index:100;
   backdrop-filter: blur(var(--aero-blur)) saturate(1.4);
-  background: linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.58) 100%);
+  background: var(--aero-header-bg);
   border-bottom:1px solid var(--aero-border);
   box-shadow: 0 4px 20px var(--aero-shadow), inset 0 1px 0 rgba(255,255,255,0.9);
-  padding:14px 16px 12px;
+  padding:14px 12px 12px;
 }
-.aero-header-top{display:flex; align-items:center; justify-content:space-between; gap:12px}
-.aero-logo{display:flex; align-items:center; gap:10px}
+.aero-header-top{display:flex; align-items:center; justify-content:space-between; gap:10px}
+.aero-logo{display:flex; align-items:center; gap:10px; min-width:0}
 .aero-logo-icon{
   width:38px;height:38px; border-radius:12px;
   background: linear-gradient(135deg, var(--aero-primary) 0%, var(--aero-accent) 100%);
   display:flex; align-items:center; justify-content:center;
-  color:#fff; font-size:19px;
+  color:#fff; font-size:19px; flex-shrink:0;
   box-shadow: 0 4px 14px rgba(91,127,255,0.45), inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -2px 6px rgba(0,0,0,0.15);
   position:relative; overflow:hidden;
 }
@@ -82,9 +91,9 @@ body::before{
   background: linear-gradient(180deg, rgba(255,255,255,0.75) 0%, transparent 100%);
   border-radius: 10px 10px 40px 40px; opacity:.9;
 }
-.aero-logo h1{font-size:19px; font-weight:800; letter-spacing:-0.4px; color:var(--aero-text)}
-.aero-logo p{font-size:11px; color:var(--aero-hint); font-weight:600; margin-top:1px}
-.aero-header-actions{display:flex; gap:8px}
+.aero-logo h1{font-size:19px; font-weight:800; letter-spacing:-0.4px; color:var(--aero-text); line-height:1}
+.aero-logo p{font-size:11px; color:var(--aero-hint); font-weight:600; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.aero-header-actions{display:flex; gap:8px; flex-shrink:0}
 .aero-icon-btn{
   width:38px;height:38px; border-radius:12px; border:1px solid var(--aero-border);
   background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.65) 100%);
@@ -96,26 +105,27 @@ body::before{
 }
 .aero-icon-btn:active{transform:scale(.94)}
 
-.stats{display:flex; gap:7px; margin-top:10px; flex-wrap:wrap}
+.stats{display:flex; gap:6px; margin-top:10px; flex-wrap:wrap}
 .stat-pill{
   font-size:11px; font-weight:700; padding:5px 10px; border-radius:20px;
   background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.72) 100%);
   border:1px solid rgba(255,255,255,0.85);
   box-shadow: 0 2px 8px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,1);
   color:var(--aero-text);
-  display:flex; align-items:center; gap:5px;
+  display:flex; align-items:center; gap:5px; white-space:nowrap;
 }
 .stat-pill b{color:var(--aero-primary)}
 
 /* tabs */
 .aero-tabs{display:flex; gap:6px; padding:10px 12px; position:sticky; top:0; z-index:99; margin-top:10px}
 .aero-tab{
-  flex:1; padding:11px 8px; border-radius:16px; border:1px solid transparent;
+  flex:1; min-width:0; padding:11px 4px; border-radius:16px; border:1px solid transparent;
   background: rgba(255,255,255,0.42); backdrop-filter: blur(10px);
   color:var(--aero-hint); font-size:13px; font-weight:700; cursor:pointer;
-  display:flex; align-items:center; justify-content:center; gap:6px;
+  display:flex; align-items:center; justify-content:center; gap:4px;
   transition: all .22s cubic-bezier(.2,.8,.3,1);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .aero-tab.active{
   background: linear-gradient(135deg, var(--aero-primary) 0%, var(--aero-accent) 100%);
@@ -123,11 +133,9 @@ body::before{
   box-shadow: 0 6px 18px rgba(91,127,255,0.38), inset 0 1px 0 rgba(255,255,255,0.65), inset 0 -2px 6px rgba(0,0,0,0.12);
   transform: translateY(-1px);
 }
-.aero-tab small{display:none}
-@media(min-width:400px){ .aero-tab small{display:inline; font-weight:500; opacity:.85} }
 
-.content{padding:12px 12px 0}
-.panel{display:none}
+.content{padding:12px 12px 0; width:100%; min-width:0}
+.panel{display:none; min-width:0}
 .panel.active{display:block; animation: fadeIn .24s ease}
 @keyframes fadeIn{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
 @keyframes slideUp{from{transform:translateY(14px); opacity:0} to{transform:none; opacity:1}}
@@ -141,13 +149,13 @@ body::before{
   box-shadow: 0 8px 28px var(--aero-shadow), inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -1px 6px rgba(255,255,255,0.45);
   padding:14px 15px;
   margin-bottom:10px;
-  position:relative; overflow:hidden;
+  position:relative; overflow:hidden; min-width:0;
 }
 .glass-card::before{
   content:''; position:absolute; top:0; left:0; right:0; height:1px;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95), transparent);
 }
-.card-top{display:flex; align-items:center; gap:6px; margin-bottom:6px}
+.card-top{display:flex; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap}
 .card-id{font-size:11px; color:var(--aero-hint); font-weight:700; background:rgba(255,255,255,0.65); padding:2px 7px; border-radius:8px; border:1px solid rgba(255,255,255,0.8)}
 .card-type{font-size:10px; padding:3px 8px; border-radius:10px; font-weight:800; letter-spacing:.2px; border:1px solid rgba(255,255,255,0.7)}
 .card-type.once{background: linear-gradient(180deg, rgba(91,127,255,0.18) 0%, rgba(91,127,255,0.10) 100%); color:var(--aero-primary); box-shadow:inset 0 1px 0 rgba(255,255,255,0.7)}
@@ -156,7 +164,7 @@ body::before{
 .card-color-dot{width:10px;height:10px;border-radius:50%; border:1px solid rgba(255,255,255,0.8); box-shadow:0 1px 4px rgba(0,0,0,0.15), inset 0 1px 2px rgba(255,255,255,0.8)}
 .card-text{font-size:14.5px; line-height:1.38; word-break:break-word; font-weight:600; color:var(--aero-text); padding-right:30px}
 .card-desc{font-size:12.5px; color:var(--aero-hint); margin-top:3px; word-break:break-word}
-.card-meta{font-size:11px; color:var(--aero-hint); display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; font-weight:600}
+.card-meta{font-size:11px; color:var(--aero-hint); display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; font-weight:600}
 .card-meta span{background:rgba(255,255,255,0.65); padding:3px 8px; border-radius:10px; border:1px solid rgba(255,255,255,0.6)}
 .card-del, .card-edit{
   position:absolute; width:30px;height:30px; border-radius:50%; border:1px solid rgba(255,255,255,0.8);
@@ -175,35 +183,35 @@ body::before{
 .msg-text{font-size:13.5px; line-height:1.42; word-break:break-word}
 .msg-time{font-size:10.5px; color:var(--aero-hint); margin-top:5px; font-weight:600}
 
-/* calendar */
-.cal-wrap{padding:0 0 10px}
-.cal-header{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px}
-.cal-title{font-size:18px; font-weight:800; letter-spacing:-0.3px; display:flex; align-items:center; gap:8px}
-.cal-title b{font-weight:800}
-.cal-nav{display:flex; gap:8px}
+/* calendar - ADAPTIVE FIX */
+.cal-wrap{padding:0 0 10px; width:100%; min-width:0; overflow:hidden}
+.cal-header{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; min-width:0}
+.cal-title{font-size:clamp(15px, 4vw, 18px); font-weight:800; letter-spacing:-0.3px; display:flex; align-items:center; gap:6px; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.cal-nav{display:flex; gap:6px; flex-shrink:0}
 .cal-nav button{
-  width:38px;height:38px; border-radius:12px; border:1px solid var(--aero-border);
+  width:36px;height:36px; border-radius:12px; border:1px solid var(--aero-border);
   background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.68) 100%);
-  backdrop-filter: blur(8px); cursor:pointer; font-size:16px;
+  backdrop-filter: blur(8px); cursor:pointer; font-size:16px; flex-shrink:0;
   box-shadow:0 2px 10px rgba(0,0,0,0.07), inset 0 1px 0 #fff;
 }
 .cal-grid{
   background: linear-gradient(180deg, var(--aero-glass-strong) 0%, var(--aero-glass) 100%);
   backdrop-filter: blur(var(--aero-blur)); border:1px solid var(--aero-border);
-  border-radius:22px; padding:10px;
+  border-radius:22px; padding:8px;
   box-shadow:0 8px 28px var(--aero-shadow), inset 0 1px 0 rgba(255,255,255,0.95);
+  width:100%; min-width:0; overflow:hidden; box-sizing:border-box;
 }
-.cal-weekdays{display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:6px}
-.cal-weekdays span{text-align:center; font-size:11px; font-weight:800; color:var(--aero-hint); padding:4px 0}
-.cal-days{display:grid; grid-template-columns:repeat(7,1fr); gap:5px}
+.cal-weekdays{display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:2px; margin-bottom:6px; width:100%}
+.cal-weekdays span{text-align:center; font-size:10px; font-weight:800; color:var(--aero-hint); padding:4px 0; min-width:0}
+.cal-days{display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:4px; width:100%}
 .cal-day{
-  min-height:66px; border-radius:14px; padding:6px 5px 4px;
+  min-height:58px; border-radius:12px; padding:5px 4px 4px;
   background: linear-gradient(180deg, rgba(255,255,255,0.78) 0%, rgba(255,255,255,0.52) 100%);
   border:1px solid rgba(255,255,255,0.65);
   cursor:pointer; position:relative;
   transition: all .16s ease;
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 4px rgba(0,0,0,0.04);
-  display:flex; flex-direction:column;
+  display:flex; flex-direction:column; min-width:0; overflow:hidden;
 }
 .cal-day:hover{transform:translateY(-1px); box-shadow:0 4px 14px rgba(0,0,0,0.08), inset 0 1px 0 #fff}
 .cal-day.other{opacity:.38; background:rgba(255,255,255,0.32)}
@@ -215,12 +223,24 @@ body::before{
 .cal-day.today .cal-day-num{color:#fff}
 .cal-day.today .cal-dot{background:#fff}
 .cal-day.selected{outline:2px solid var(--aero-primary); outline-offset:1px}
-.cal-day-num{font-size:12px; font-weight:800; line-height:1; margin-bottom:3px; color:var(--aero-text)}
-.cal-dots{display:flex; gap:2px; flex-wrap:wrap; margin-top:auto}
-.cal-dot{width:6px;height:6px;border-radius:50%; border:1px solid rgba(255,255,255,0.8); box-shadow:0 1px 3px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.9)}
-.cal-preview{font-size:8.5px; font-weight:700; line-height:1.15; color:var(--aero-text); background:rgba(255,255,255,0.72); border-radius:6px; padding:1px 3px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; border:1px solid rgba(255,255,255,0.6)}
+.cal-day-num{font-size:12px; font-weight:800; line-height:1; margin-bottom:3px; color:var(--aero-text); flex-shrink:0}
+.cal-dots{display:flex; gap:2px; flex-wrap:wrap; margin-top:auto; min-width:0}
+.cal-dot{width:6px;height:6px;border-radius:50%; flex-shrink:0; border:1px solid rgba(255,255,255,0.8); box-shadow:0 1px 3px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.9)}
+.cal-preview{font-size:8px; font-weight:700; line-height:1.15; color:var(--aero-text); background:rgba(255,255,255,0.72); border-radius:6px; padding:1px 3px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; border:1px solid rgba(255,255,255,0.6); min-width:0}
 .cal-day.today .cal-preview{background:rgba(255,255,255,0.92); color:var(--aero-primary)}
-.cal-day.has-events{}
+@media (max-width:360px){
+  .cal-grid{padding:6px; border-radius:18px}
+  .cal-days{gap:3px}
+  .cal-day{min-height:52px; border-radius:10px; padding:4px 3px 3px}
+  .cal-day-num{font-size:11px}
+  .cal-preview{font-size:7.5px; padding:1px 2px}
+  .cal-dot{width:5px;height:5px}
+  .aero-header{padding:12px 10px 10px}
+  .content{padding:10px 8px 0}
+}
+@media (min-width:560px){
+  .app-shell{box-shadow:0 0 0 1px rgba(255,255,255,0.5), 0 12px 40px rgba(31,38,135,0.12)}
+}
 
 /* day modal list */
 .day-events-list{max-height:46vh; overflow-y:auto; margin-top:8px; padding-right:2px}
@@ -247,6 +267,7 @@ body::before{
   transition: transform .14s;
 }
 .aero-fab:active{transform:scale(.93)}
+@media (min-width:560px){ .aero-fab{right:calc(50% - 280px + 16px)} }
 
 /* modals */
 .modal-overlay{display:none; position:fixed; inset:0; background:rgba(31,42,74,0.28); backdrop-filter: blur(6px); z-index:300; align-items:flex-end; justify-content:center}
@@ -261,14 +282,14 @@ body::before{
   padding-bottom:calc(28px + env(safe-area-inset-bottom,0px));
 }
 .modal h3{font-size:17px; font-weight:800; letter-spacing:-0.3px; margin-bottom:10px; display:flex; align-items:center; gap:8px}
-.modal h3 i{width:30px;height:30px; border-radius:10px; background:linear-gradient(135deg,var(--aero-primary),var(--aero-accent)); display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; font-style:normal}
+.modal h3 i{width:30px;height:30px; border-radius:10px; background:linear-gradient(135deg,var(--aero-primary),var(--aero-accent)); display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; font-style:normal; flex-shrink:0}
 .modal label{display:block; font-size:11px; color:var(--aero-hint); font-weight:800; margin-bottom:4px; margin-top:10px; text-transform:uppercase; letter-spacing:.4px}
-.modal input[type=text], .modal input[type=number], .modal input[type=date], .modal input[type=time], .modal textarea, .modal select{
+.modal input[type=text], .modal input[type=number], .modal input[type=date], .modal input[type=time], .modal textarea, .modal select, .modal input[type=url]{
   width:100%; padding:11px 12px; border:1px solid rgba(130,160,200,0.22); border-radius:12px;
   background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.78) 100%);
   color:var(--aero-text); font-size:15px; outline:none; min-height:44px;
   box-shadow:inset 0 1px 0 rgba(255,255,255,1), 0 1px 6px rgba(0,0,0,0.04);
-  transition: border-color .15s, box-shadow .15s;
+  transition: border-color .15s, box-shadow .15s; min-width:0;
 }
 .modal textarea{resize:vertical; min-height:64px}
 .modal input:focus, .modal textarea:focus, .modal select:focus{border-color:var(--aero-primary); box-shadow:0 0 0 3px rgba(91,127,255,0.15)}
@@ -319,16 +340,29 @@ input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-c
 .theme-edit-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px}
 .theme-edit-grid label{font-size:10px; margin-top:0}
 .theme-edit-grid input[type=color]{width:100%; height:40px; border-radius:10px; border:1px solid rgba(130,160,200,0.2); padding:2px; background:#fff}
+.theme-section{margin-top:14px; padding-top:12px; border-top:1px solid rgba(130,160,200,0.14)}
+.theme-section h4{font-size:12px; font-weight:800; margin-bottom:6px; color:var(--aero-text); display:flex; align-items:center; gap:6px}
+.toggle-row{display:flex; align-items:center; justify-content:space-between; gap:10px; background:rgba(255,255,255,0.55); padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.6); margin-top:8px}
+.toggle-row b{font-size:13px; font-weight:800}
+.toggle-switch{width:44px; height:26px; border-radius:20px; background:#cbd5e1; position:relative; cursor:pointer; transition:background .2s; flex-shrink:0; border:1px solid rgba(0,0,0,0.08)}
+.toggle-switch.on{background:var(--aero-primary)}
+.toggle-switch::after{content:''; position:absolute; width:20px; height:20px; border-radius:50%; background:#fff; top:2px; left:2px; box-shadow:0 1px 4px rgba(0,0,0,0.2); transition:transform .2s}
+.toggle-switch.on::after{transform:translateX(18px)}
+.bg-preview{width:100%; height:86px; border-radius:12px; border:1px solid rgba(130,160,200,0.18); margin-top:8px; background-size:cover; background-position:center; background-color: rgba(255,255,255,0.6); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--aero-hint); overflow:hidden; position:relative}
+.bg-preview.has-image{color:#fff; text-shadow:0 1px 4px rgba(0,0,0,0.6)}
+.bg-preview span{background:rgba(255,255,255,0.85); padding:4px 8px; border-radius:8px}
+.bg-preview.has-image span{background:rgba(0,0,0,0.35); backdrop-filter:blur(4px)}
 </style>
 </head>
 <body>
 <div class="aero-bubbles"><span class="b1"></span><span class="b2"></span><span class="b3"></span><span class="b4"></span><span class="b5"></span></div>
+<div class="app-shell">
 
 <div class="aero-header">
   <div class="aero-header-top">
     <div class="aero-logo">
       <div class="aero-logo-icon">☁️</div>
-      <div>
+      <div style="min-width:0">
         <h1>Secretary</h1>
         <p>Frutiger Aero • Кабинет</p>
       </div>
@@ -353,7 +387,6 @@ input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-c
 </div>
 
 <div class="content">
-  <!-- CALENDAR PANEL -->
   <div id="panel-calendar" class="panel active">
     <div class="cal-wrap">
       <div class="cal-header">
@@ -368,9 +401,9 @@ input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-c
         <div class="cal-weekdays"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span></div>
         <div class="cal-days" id="cal-days"></div>
       </div>
-      <div style="display:flex; gap:8px; margin-top:10px">
-        <button class="glass-card" style="flex:1; padding:10px; font-weight:800; font-size:12px; cursor:pointer; text-align:center; border-radius:14px" onclick="openDayModal(calSelectedDate)">+ Событие на выбранный день</button>
-        <button class="glass-card" style="padding:10px 14px; font-weight:800; font-size:12px; cursor:pointer; border-radius:14px" onclick="openEventModal(calSelectedDate)">⚡ Быстро</button>
+      <div style="display:flex; gap:8px; margin-top:10px; min-width:0">
+        <button class="glass-card" style="flex:1; min-width:0; padding:10px; font-weight:800; font-size:12px; cursor:pointer; text-align:center; border-radius:14px" onclick="openDayModal(calSelectedDate)">+ Событие на выбранный день</button>
+        <button class="glass-card" style="padding:10px 14px; font-weight:800; font-size:12px; cursor:pointer; border-radius:14px; flex-shrink:0" onclick="openEventModal(calSelectedDate)">⚡ Быстро</button>
       </div>
       <div id="cal-legend" style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap; font-size:10px; font-weight:700; color:var(--aero-hint)">
         <span style="display:flex;align-items:center;gap:4px"><span class="card-color-dot" style="background:#5b7fff"></span> События</span>
@@ -380,7 +413,6 @@ input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-c
     </div>
   </div>
 
-  <!-- REMINDERS PANEL -->
   <div id="panel-reminders" class="panel">
     {% if reminders %}
       {% for r in reminders %}
@@ -399,7 +431,6 @@ input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-c
     {% else %}<div class="glass-card empty">Нет напоминаний — добавь первое ✨</div>{% endif %}
   </div>
 
-  <!-- MESSAGES PANEL -->
   <div id="panel-messages" class="panel">
     {% if messages %}
       {% for m in messages %}
@@ -414,9 +445,9 @@ input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-c
   </div>
 </div>
 
+</div> <!-- app-shell -->
 <button class="aero-fab" id="fab" onclick="fabAction()">+</button>
 
-<!-- Reminder modal (legacy) -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
   <div class="modal" onclick="event.stopPropagation()">
     <h3><i>🔔</i> Новое напоминание</h3>
@@ -434,7 +465,6 @@ input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-c
   </div>
 </div>
 
-<!-- Day modal -->
 <div class="modal-overlay" id="day-modal" onclick="closeDayModal(event)">
   <div class="modal" onclick="event.stopPropagation()">
     <h3><i>📅</i> <span id="day-modal-title">День</span></h3>
@@ -444,7 +474,6 @@ input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-c
   </div>
 </div>
 
-<!-- Event modal (calendar) -->
 <div class="modal-overlay" id="event-modal" onclick="closeEventModal(event)">
   <div class="modal" onclick="event.stopPropagation()">
     <h3><i>✨</i> <span id="event-modal-title">Новое событие</span></h3>
@@ -475,20 +504,64 @@ input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-c
   </div>
 </div>
 
-<!-- Theme modal -->
+<!-- Theme modal - FULL CUSTOM -->
 <div class="modal-overlay" id="theme-modal" onclick="closeThemeModal(event)">
   <div class="modal" onclick="event.stopPropagation()">
-    <h3><i>🎨</i> Цветовые темы — Frutiger Aero</h3>
-    <label>Пресеты</label>
-    <div class="theme-presets" id="theme-presets"></div>
-    <div class="theme-edit-grid">
-      <div><label>Primary</label><input type="color" id="th-primary"></div>
-      <div><label>Accent</label><input type="color" id="th-accent"></div>
-      <div><label>Фон верх</label><input type="color" id="th-bgstart"></div>
-      <div><label>Фон низ</label><input type="color" id="th-bgend"></div>
+    <h3><i>🎨</i> Темы — полная кастомизация</h3>
+
+    <div class="toggle-row">
+      <div><b id="theme-mode-label">Светлая тема</b><br><span style="font-size:11px;color:var(--aero-hint);font-weight:600">Переключи светлую / тёмную</span></div>
+      <div class="toggle-switch" id="theme-mode-switch" onclick="toggleThemeMode()"></div>
     </div>
-    <label>Прозрачность стекла</label>
-    <input type="range" id="th-alpha" min="0.35" max="0.92" step="0.02" style="width:100%; margin-top:6px">
+
+    <label>Пресеты Frutiger Aero</label>
+    <div class="theme-presets" id="theme-presets"></div>
+
+    <div class="theme-section">
+      <h4>🎨 Основные цвета</h4>
+      <div class="theme-edit-grid">
+        <div><label>Primary</label><input type="color" id="th-primary"></div>
+        <div><label>Accent</label><input type="color" id="th-accent"></div>
+      </div>
+    </div>
+
+    <div class="theme-section">
+      <h4>🖼️ Фон страницы</h4>
+      <div class="theme-edit-grid">
+        <div><label>Градиент верх</label><input type="color" id="th-bgstart"></div>
+        <div><label>Градиент низ</label><input type="color" id="th-bgend"></div>
+      </div>
+      <label>Фоновое изображение (URL) — лёгкое, не грузит хост</label>
+      <input type="url" id="th-bgimage" placeholder="https://example.com/bg.jpg — оставь пустым = градиент">
+      <div style="display:flex; gap:6px; margin-top:6px">
+        <input type="file" id="th-bgfile" accept="image/*" style="flex:1; font-size:12px; padding:8px; border:1px solid rgba(130,160,200,0.2); border-radius:10px; background:#fff">
+        <button type="button" onclick="clearBgImage()" style="padding:8px 10px; border-radius:10px; border:1px solid rgba(255,71,87,0.2); background:rgba(255,71,87,0.08); color:var(--aero-danger); font-weight:800; font-size:12px; cursor:pointer">✕</button>
+      </div>
+      <label>Прозрачность фона (наложение градиента)</label>
+      <input type="range" id="th-bg-overlay" min="0" max="0.85" step="0.05" style="width:100%; margin-top:6px">
+      <div class="bg-preview" id="th-bg-preview"><span>Превью фона</span></div>
+      <div style="font-size:10px; color:var(--aero-hint); margin-top:4px; font-weight:600">Совет: используй CDN/прямую ссылку на изображение (до 300KB). Локальный файл сохраняется только в браузере (localStorage) и не отправляется на сервер.</div>
+    </div>
+
+    <div class="theme-section">
+      <h4>💎 Стекло / Карточки</h4>
+      <div class="theme-edit-grid">
+        <div><label>Текст</label><input type="color" id="th-text"></div>
+        <div><label>Подсказки</label><input type="color" id="th-hint"></div>
+        <div><label>Граница</label><input type="color" id="th-border"></div>
+        <div><label>Тень</label><input type="color" id="th-shadow"></div>
+      </div>
+      <label>Стекло (glass)</label><input type="color" id="th-glass">
+      <label>Стекло сильное</label><input type="color" id="th-glass-strong">
+      <label>Фон header</label><input type="color" id="th-header">
+      <label>Прозрачность стекла</label>
+      <input type="range" id="th-alpha" min="0.35" max="0.92" step="0.02" style="width:100%; margin-top:6px">
+      <label>Скругление карточек</label>
+      <input type="range" id="th-radius" min="10" max="28" step="1" style="width:100%; margin-top:6px">
+      <label>Размытие (blur)</label>
+      <input type="range" id="th-blur" min="8" max="24" step="1" style="width:100%; margin-top:6px">
+    </div>
+
     <div class="modal-btns"><button class="btn-cancel" onclick="closeThemeModal()">Закрыть</button><button class="btn-ok" onclick="applyThemeCustom()">Применить</button></div>
     <button class="danger-btn" onclick="resetTheme()">Сбросить к Aqua</button>
   </div>
@@ -505,45 +578,125 @@ const reminders = {{reminders_json | safe}};
 const serverTheme = {{theme_json | safe}};
 const knownUsers = [{% for u in known_users %}{username:"{{u.username}}",name:"{{u.first_name}}"}{% if not loop.last %},{% endif %}{% endfor %}];
 
-// theme handling
+// helpers
+function hexToRgba(hex, a){ const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(1,5).slice(2),16), b=parseInt(hex.slice(5,7),16); if(isNaN(r)) return hex; return `rgba(${r},${g},${b},${a})`; }
+function rgbaAlpha(rgba, a){ // rgba(...) -> replace alpha
+  const m=rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/); if(m) return `rgba(${m[1]},${m[2]},${m[3]},${a})`; return rgba;
+}
+
+// theme handling - FULL
 const THEMES={
-  aqua:{name:'Aqua', primary:'#5b7fff', accent:'#00d4ff', bgStart:'#a0d8ef', bgEnd:'#e0f7ff', alpha:0.62},
-  sunset:{name:'Sunset', primary:'#ff7e5f', accent:'#feb47b', bgStart:'#ffd194', bgEnd:'#ff8a9b', alpha:0.62},
-  aurora:{name:'Aurora', primary:'#a18cd1', accent:'#fbc2eb', bgStart:'#c2e9fb', bgEnd:'#e0c3fc', alpha:0.6},
-  midnight:{name:'Midnight', primary:'#667eea', accent:'#764ba2', bgStart:'#1a1a2e', bgEnd:'#2a3a5a', alpha:0.55},
-  forest:{name:'Forest', primary:'#2ed573', accent:'#7bed9f', bgStart:'#c3f0ca', bgEnd:'#e6f9e6', alpha:0.62},
+  aqua:{name:'Aqua', mode:'light', primary:'#5b7fff', accent:'#00d4ff', bgStart:'#a0d8ef', bgEnd:'#e0f7ff', bgImage:'', bgOverlay:0, text:'#1a2a4a', hint:'#6a8aaa', glass:'#ffffff', glassStrong:'#ffffff', border:'#ffffff', shadow:'#1f2687', alpha:0.62, radius:20, blur:16, header:'#ffffff'},
+  sunset:{name:'Sunset', mode:'light', primary:'#ff7e5f', accent:'#feb47b', bgStart:'#ffd194', bgEnd:'#ff8a9b', bgImage:'', bgOverlay:0, text:'#3a1f1f', hint:'#8a6a5a', glass:'#ffffff', glassStrong:'#ffffff', border:'#ffffff', shadow:'#7a3a1f', alpha:0.62, radius:20, blur:16, header:'#ffffff'},
+  aurora:{name:'Aurora', mode:'light', primary:'#a18cd1', accent:'#fbc2eb', bgStart:'#c2e9fb', bgEnd:'#e0c3fc', bgImage:'', bgOverlay:0, text:'#2a1f3a', hint:'#7a6a8a', glass:'#ffffff', glassStrong:'#ffffff', border:'#ffffff', shadow:'#3a2a5a', alpha:0.60, radius:20, blur:16, header:'#ffffff'},
+  midnight:{name:'Midnight', mode:'dark', primary:'#667eea', accent:'#764ba2', bgStart:'#0f0f1e', bgEnd:'#1e2a4a', bgImage:'', bgOverlay:0, text:'#e6e9ff', hint:'#9aa8c7', glass:'#1e2340', glassStrong:'#252a4a', border:'#2a2f55', shadow:'#000000', alpha:0.55, radius:20, blur:16, header:'#1a1f3a'},
+  forest:{name:'Forest', mode:'light', primary:'#2ed573', accent:'#7bed9f', bgStart:'#c3f0ca', bgEnd:'#e6f9e6', bgImage:'', bgOverlay:0, text:'#1a2a1a', hint:'#5a7a5a', glass:'#ffffff', glassStrong:'#ffffff', border:'#ffffff', shadow:'#1a3a1f', alpha:0.62, radius:20, blur:16, header:'#ffffff'},
 }
 function applyTheme(t){
+  // normalize missing fields from defaults
+  const def=THEMES.aqua;
+  t={...def, ...t};
+  // css vars
   document.documentElement.style.setProperty('--aero-primary', t.primary);
   document.documentElement.style.setProperty('--aero-accent', t.accent);
   document.documentElement.style.setProperty('--aero-bg-start', t.bgStart);
   document.documentElement.style.setProperty('--aero-bg-end', t.bgEnd);
-  document.documentElement.style.setProperty('--aero-glass', `rgba(255,255,255,${t.alpha})`);
-  document.documentElement.style.setProperty('--aero-glass-strong', `rgba(255,255,255,${Math.min(0.96, t.alpha+0.18)})`);
-  if(t.bgStart==='#1a1a2e'){
-    document.documentElement.style.setProperty('--aero-text','#e6e9ff');
-    document.documentElement.style.setProperty('--aero-hint','#9aa8c7');
+  document.documentElement.style.setProperty('--aero-text', t.text);
+  document.documentElement.style.setProperty('--aero-hint', t.hint);
+  // glass with alpha
+  const glassRgba = t.glass.startsWith('#') ? hexToRgba(t.glass, t.alpha) : t.glass;
+  const glassStrongRgba = t.glassStrong.startsWith('#') ? hexToRgba(t.glassStrong, Math.min(0.96, t.alpha+0.18)) : t.glassStrong;
+  document.documentElement.style.setProperty('--aero-glass', glassRgba);
+  document.documentElement.style.setProperty('--aero-glass-strong', glassStrongRgba);
+  document.documentElement.style.setProperty('--aero-border', t.border.startsWith('#') ? hexToRgba(t.border, t.mode==='dark'?0.18:0.7) : t.border);
+  document.documentElement.style.setProperty('--aero-shadow', t.shadow.startsWith('#') ? hexToRgba(t.shadow, t.mode==='dark'?0.35:0.16) : t.shadow);
+  document.documentElement.style.setProperty('--aero-card-radius', t.radius+'px');
+  document.documentElement.style.setProperty('--aero-blur', t.blur+'px');
+  // header bg
+  let headerBg;
+  if(t.header && t.header!=='#ffffff'){
+    headerBg = hexToRgba(t.header, t.mode==='dark'?0.82:0.88);
+    headerBg = `linear-gradient(180deg, ${hexToRgba(t.header,0.92)} 0%, ${hexToRgba(t.header,0.68)} 100%)`;
   } else {
-    document.documentElement.style.setProperty('--aero-text','#1a2a4a');
-    document.documentElement.style.setProperty('--aero-hint','#6a8aaa');
+    if(t.mode==='dark') headerBg = `linear-gradient(180deg, rgba(30,35,64,0.88) 0%, rgba(30,35,64,0.62) 100%)`;
+    else headerBg = `linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.58) 100%)`;
   }
+  document.documentElement.style.setProperty('--aero-header-bg', headerBg);
+  // bg image
+  if(t.bgImage){
+    document.documentElement.style.setProperty('--aero-bg-image', `url("${t.bgImage}")`);
+    document.documentElement.style.setProperty('--aero-bg-overlay', String(t.bgOverlay||0));
+    document.body.style.backgroundImage = `url("${t.bgImage}"), linear-gradient(180deg, ${t.bgStart} 0%, ${t.bgEnd} 100%)`;
+  } else {
+    document.documentElement.style.setProperty('--aero-bg-image', 'none');
+    document.documentElement.style.setProperty('--aero-bg-overlay', '0');
+    document.body.style.backgroundImage = `linear-gradient(180deg, ${t.bgStart} 0%, ${t.bgEnd} 100%)`;
+  }
+  // persist
   localStorage.setItem('aeroTheme', JSON.stringify(t));
-  fetch('/api/theme',{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(t)}).catch(()=>{});
+  // server persist - but don't send huge dataURLs (local file) to server
+  const toSend={...t};
+  if(toSend.bgImage && toSend.bgImage.startsWith('data:')){ toSend.bgImage=''; } // don't bloat DB with data url
+  fetch('/api/theme',{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(toSend)}).catch(()=>{});
+  currentTheme=t;
+  updateModeUI();
 }
 function loadTheme(){
   let t=null;
   const ls=localStorage.getItem('aeroTheme');
   if(ls){ try{ t=JSON.parse(ls)}catch{}}
+  // if local has dataUrl bgImage keep it, else fallback to server
   if(!t && serverTheme){ t=serverTheme; }
-  if(!t) t=THEMES.aqua;
+  // if local missing bgImage but server has, merge? already handled
+  // if t missing fields, merge with defaults later in apply
+  if(!t) t={...THEMES.aqua};
+  // migration: older themes lack many fields
+  t={...THEMES.aqua, ...t};
   applyTheme(t);
   return t;
 }
 let currentTheme=loadTheme();
+function updateModeUI(){
+  const sw=document.getElementById('theme-mode-switch');
+  const label=document.getElementById('theme-mode-label');
+  if(!sw) return;
+  const isDark=currentTheme.mode==='dark';
+  sw.classList.toggle('on', isDark);
+  label.textContent=isDark?'Тёмная тема':'Светлая тема';
+}
+function toggleThemeMode(){
+  const isDark=currentTheme.mode==='dark';
+  if(isDark){
+    // to light
+    currentTheme={...currentTheme, mode:'light', text:'#1a2a4a', hint:'#6a8aaa', glass:'#ffffff', glassStrong:'#ffffff', border:'#ffffff', shadow:'#1f2687', header:'#ffffff'};
+  } else {
+    currentTheme={...currentTheme, mode:'dark', text:'#e6e9ff', hint:'#9aa8c7', glass:'#1e2340', glassStrong:'#252a4a', border:'#2a2f55', shadow:'#000000', header:'#1a1f3a'};
+  }
+  applyTheme(currentTheme);
+  openThemeModal();
+}
+function updateBgPreview(){
+  const url=document.getElementById('th-bgimage')?.value.trim();
+  const preview=document.getElementById('th-bg-preview');
+  if(!preview) return;
+  if(url){
+    preview.style.backgroundImage=`url("${url}")`;
+    preview.classList.add('has-image');
+    preview.innerHTML='<span>Превью</span>';
+  } else if(currentTheme.bgImage && currentTheme.bgImage.startsWith('data:')){
+    preview.style.backgroundImage=`url("${currentTheme.bgImage}")`;
+    preview.classList.add('has-image');
+    preview.innerHTML='<span>Локальное изображение</span>';
+  } else {
+    preview.style.backgroundImage='';
+    preview.classList.remove('has-image');
+    preview.innerHTML='<span>Градиент</span>';
+  }
+}
 function openThemeModal(){
   const root=document.getElementById('theme-presets');
   root.innerHTML=Object.entries(THEMES).map(([k,v])=>`
-    <div class="theme-preset ${currentTheme.primary===v.primary?'active':''}" onclick="selectPreset('${k}')">
+    <div class="theme-preset ${currentTheme.primary===v.primary && currentTheme.mode===v.mode?'active':''}" onclick="selectPreset('${k}')">
       <div class="preset-dots"><span style="background:${v.primary}"></span><span style="background:${v.accent}"></span><span style="background:${v.bgStart}"></span></div>
       <div style="font-size:13px;font-weight:800">${v.name}</div>
     </div>
@@ -552,23 +705,84 @@ function openThemeModal(){
   document.getElementById('th-accent').value=currentTheme.accent;
   document.getElementById('th-bgstart').value=currentTheme.bgStart;
   document.getElementById('th-bgend').value=currentTheme.bgEnd;
+  document.getElementById('th-bgimage').value=currentTheme.bgImage.startsWith('data:')?'':currentTheme.bgImage;
+  document.getElementById('th-bg-overlay').value=currentTheme.bgOverlay||0;
+  document.getElementById('th-text').value=currentTheme.text;
+  document.getElementById('th-hint').value=currentTheme.hint;
+  document.getElementById('th-border').value=currentTheme.border.startsWith('#')?currentTheme.border:'#ffffff';
+  document.getElementById('th-shadow').value=currentTheme.shadow.startsWith('#')?currentTheme.shadow:'#1f2687';
+  document.getElementById('th-glass').value=currentTheme.glass.startsWith('#')?currentTheme.glass:'#ffffff';
+  document.getElementById('th-glass-strong').value=currentTheme.glassStrong.startsWith('#')?currentTheme.glassStrong:'#ffffff';
+  document.getElementById('th-header').value=currentTheme.header.startsWith('#')?currentTheme.header:'#ffffff';
   document.getElementById('th-alpha').value=currentTheme.alpha;
+  document.getElementById('th-radius').value=currentTheme.radius;
+  document.getElementById('th-blur').value=currentTheme.blur;
+  updateModeUI();
+  updateBgPreview();
   document.getElementById('theme-modal').classList.add('show');
 }
 function closeThemeModal(e){ if(!e||e.target===e.currentTarget) document.getElementById('theme-modal').classList.remove('show'); }
-function selectPreset(k){ currentTheme={...THEMES[k]}; applyTheme(currentTheme); openThemeModal(); }
+function selectPreset(k){
+  const base={...THEMES[k]};
+  // keep custom bgImage if user had one? No, preset overrides bgImage to '' unless user wants keep - we reset bgImage
+  // but keep local data url if exists? we preserve only if base has no image
+  if(currentTheme.bgImage && currentTheme.bgImage.startsWith('data:') && !base.bgImage){
+    // keep local image unless preset explicitly has image
+    base.bgImage=currentTheme.bgImage;
+    base.bgOverlay=currentTheme.bgOverlay;
+  }
+  currentTheme=base;
+  applyTheme(currentTheme);
+  openThemeModal();
+}
 function applyThemeCustom(){
+  const urlVal=document.getElementById('th-bgimage').value.trim();
+  // if local data url exists and url input empty, keep data url
+  let bgImage=urlVal;
+  if(!bgImage && currentTheme.bgImage && currentTheme.bgImage.startsWith('data:')){
+    bgImage=currentTheme.bgImage;
+  }
   currentTheme={
     name:'Custom',
+    mode: currentTheme.mode,
     primary:document.getElementById('th-primary').value,
     accent:document.getElementById('th-accent').value,
     bgStart:document.getElementById('th-bgstart').value,
     bgEnd:document.getElementById('th-bgend').value,
-    alpha:parseFloat(document.getElementById('th-alpha').value)
+    bgImage: bgImage,
+    bgOverlay: parseFloat(document.getElementById('th-bg-overlay').value)||0,
+    text:document.getElementById('th-text').value,
+    hint:document.getElementById('th-hint').value,
+    glass:document.getElementById('th-glass').value,
+    glassStrong:document.getElementById('th-glass-strong').value,
+    border:document.getElementById('th-border').value,
+    shadow:document.getElementById('th-shadow').value,
+    header:document.getElementById('th-header').value,
+    alpha:parseFloat(document.getElementById('th-alpha').value),
+    radius:parseInt(document.getElementById('th-radius').value)||20,
+    blur:parseInt(document.getElementById('th-blur').value)||16,
   };
   applyTheme(currentTheme); closeThemeModal();
 }
 function resetTheme(){ currentTheme={...THEMES.aqua}; applyTheme(currentTheme); openThemeModal(); }
+function clearBgImage(){
+  document.getElementById('th-bgimage').value='';
+  currentTheme.bgImage='';
+  updateBgPreview();
+}
+document.getElementById('th-bgimage')?.addEventListener('input', updateBgPreview);
+document.getElementById('th-bgfile')?.addEventListener('change', function(e){
+  const f=e.target.files[0]; if(!f) return;
+  if(f.size> 900*1024){ alert('Файл слишком большой (макс 900KB для localStorage). Используй URL или сожми изображение.'); return; }
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    currentTheme.bgImage=ev.target.result; // data url
+    updateBgPreview();
+    // preview immediately
+    document.getElementById('th-bg-preview').style.backgroundImage=`url("${currentTheme.bgImage}")`;
+  };
+  reader.readAsDataURL(f);
+});
 
 // tab switching
 let activeTab='calendar';
@@ -589,7 +803,7 @@ function fabAction(){
 }
 
 // calendar logic
-let calYear, calMonth; // 0-indexed month
+let calYear, calMonth;
 let calSelectedDate=null;
 const monthNames=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 function toISO(d){ const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
@@ -611,7 +825,7 @@ function getEventsForDate(iso){
   const evs=calendarEvents.filter(e=>e.event_date===iso);
   const rems=reminders.filter(r=>{
     if(!r.remind_at) return false;
-    const d=r.remind_at.slice(0,10); // YYYY-MM-DD
+    const d=r.remind_at.slice(0,10);
     return d===iso;
   }).map(r=>({isReminder:true, id:r.id, text:r.text, time:r.remind_at.slice(11,16), color:r.is_cyclic?'#ffa502':'#ff7e5f', raw:r}));
   return {evs, rems};
@@ -620,10 +834,10 @@ function getEventsForDate(iso){
 function renderCal(){
   document.getElementById('cal-month-label').textContent=`${monthNames[calMonth]} ${calYear}`;
   const first=new Date(calYear, calMonth, 1);
-  let startDay=(first.getDay()+6)%7; // Monday 0
+  let startDay=(first.getDay()+6)%7;
   const daysInMonth=new Date(calYear, calMonth+1, 0).getDate();
   const daysInPrev=new Date(calYear, calMonth, 0).getDate();
-  const totalCells=42; // 6 weeks
+  const totalCells=42;
   const todayISO=toISO(new Date());
   let html='';
   for(let i=0;i<totalCells;i++){
@@ -698,9 +912,8 @@ function onDayItemClick(kind, id){
   if(kind==='event'){
     closeDayModal(); openEventModal(null, id);
   } else {
-    // for reminder we could show alert or switch tab
     closeDayModal(); switchTab('reminders');
-    setTimeout(()=>{ const el=document.querySelector(`.glass-card .card-id`); window.scrollTo({top:0,behavior:'smooth'}); },100);
+    setTimeout(()=>{ window.scrollTo({top:0,behavior:'smooth'}); },100);
   }
 }
 function formatOffset(mins){ const h=Math.floor(mins/60), m=mins%60; if(h&&m) return `${h}ч ${m}м`; if(h) return `${h}ч`; return `${m}м`; }
@@ -801,7 +1014,7 @@ async function deleteEvent(){
   location.reload();
 }
 
-// reminders modal legacy (keep)
+// reminders modal
 function openModal(){
   const n=nowISO();
   document.getElementById('inp-date').value=n.date;
@@ -866,7 +1079,6 @@ function showConfirmDelAll(){document.getElementById('confirm-overlay').classLis
 function hideConfirmDelAll(){document.getElementById('confirm-overlay').classList.remove('show')}
 async function delAll(){ await fetch('/reminders/deleteall',{method:'POST'}); location.reload(); }
 
-// init
 initCal(); updateFab();
 </script>
 </body>

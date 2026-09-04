@@ -161,7 +161,17 @@ async def _fire_reminder(reminder_id: int, bot, scheduler):
             pass
 
     if reminder['is_cyclic']:
-        next_time = datetime.now(tz) + timedelta(seconds=reminder['interval_seconds'])
+        # Следующее срабатывание = предыдущее время + интервал (сохраняем wall-clock время),
+        # а не now + интервал (дрейф). Если проспали несколько интервалов — догоняем.
+        try:
+            prev = tz.localize(datetime.strptime(reminder['remind_at'], "%Y-%m-%d %H:%M:%S"))
+        except Exception:
+            prev = datetime.now(tz)
+        next_time = prev + timedelta(seconds=reminder['interval_seconds'])
+        now = datetime.now(tz)
+        # если бот был оффлайн долго — прокручиваем до будущего
+        while next_time < now:
+            next_time += timedelta(seconds=reminder['interval_seconds'])
         await db.update_remind_at(reminder_id, next_time.strftime("%Y-%m-%d %H:%M:%S"))
         schedule_reminder(reminder_id, next_time, bot, scheduler)
     else:

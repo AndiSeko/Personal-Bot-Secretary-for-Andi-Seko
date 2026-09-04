@@ -235,8 +235,13 @@ async def add_reminder(request: Request, text: str = Form(...)):
         if interval_seconds < 60:
             interval_seconds = 60
 
+        # Сохраняем заданное пользователем время даже если оно в прошлом:
+        # сдвигаем по интервалу вперёд пока не окажется в будущем
         if remind_at < now:
-            remind_at = now + timedelta(seconds=interval_seconds)
+            # предотвращаем бесконечный цикл при очень маленьком интервале
+            # уже гарантировано interval_seconds >=60
+            while remind_at < now:
+                remind_at += timedelta(seconds=interval_seconds)
 
         remind_at_str = remind_at.strftime("%Y-%m-%d %H:%M:%S")
         reminder_id = await db.add_reminder(text, remind_at_str, is_cyclic=True, interval_seconds=interval_seconds, target_chat_id=target_chat_id)
