@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 import json as _json
 
 WEB_PASSWORD = os.getenv("WEB_PASSWORD", "secretary")
+GIT_COMMIT = os.getenv("RENDER_GIT_COMMIT", os.getenv("GIT_COMMIT", "local"))[:7]
 
 app = FastAPI(title="Secretary")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
@@ -164,7 +165,7 @@ async def index(request: Request):
         except:
             theme = None
 
-    return templates.TemplateResponse(request, "index.html", {
+    resp = templates.TemplateResponse(request, "index.html", {
         "request": request,
         "reminders": reminders,
         "messages": messages,
@@ -179,7 +180,11 @@ async def index(request: Request):
         "owner_id": config.OWNER_ID or 0,
         "known_users": await db.get_all_known_users(),
         "theme_json": _json.dumps(theme) if theme else "null",
+        "git_commit": GIT_COMMIT,
     })
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp.headers["Pragma"] = "no-cache"
+    return resp
 
 
 @app.post("/login")
@@ -446,7 +451,12 @@ async def health(request: Request):
     from fastapi.responses import JSONResponse
     if request.method == "HEAD":
         return JSONResponse({"status": "ok"}, status_code=200)
-    return JSONResponse({"status": "ok", "scheduler_running": bool(_scheduler and _scheduler.running)})
+    return JSONResponse({"status": "ok", "scheduler_running": bool(_scheduler and _scheduler.running), "commit": GIT_COMMIT})
+
+
+@app.get("/version")
+async def version():
+    return JSONResponse({"commit": GIT_COMMIT, "status": "ok"})
 
 
 @app.api_route("/ping", methods=["GET", "HEAD"])

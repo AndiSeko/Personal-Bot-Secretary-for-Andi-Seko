@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Secretary — Aero</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<title>Secretary — Aero {{git_commit}}</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 /* ===== FRUTIGER AERO THEME ===== */
@@ -364,11 +366,12 @@ input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-c
       <div class="aero-logo-icon">☁️</div>
       <div style="min-width:0">
         <h1>Secretary</h1>
-        <p>Frutiger Aero • Кабинет</p>
+        <p>Frutiger Aero • Кабинет <small style="opacity:.6; font-size:9px; margin-left:4px">{{git_commit}}</small></p>
       </div>
     </div>
     <div class="aero-header-actions">
       <button class="aero-icon-btn" onclick="openThemeModal()" title="Темы">🎨</button>
+      <button class="aero-icon-btn" onclick="location.reload(true)" title="Обновить">↻</button>
       <button class="aero-icon-btn" onclick="location.href='/logout'" title="Выйти">⎋</button>
     </div>
   </div>
@@ -379,6 +382,7 @@ input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-c
     <span class="stat-pill">💬 <b>{{msg_count}}</b> сообщений</span>
   </div>
 </div>
+<div id="js-error" style="display:none; background:rgba(255,71,87,0.12); border:1px solid rgba(255,71,87,0.25); color:#b91c1c; padding:8px 10px; margin:10px 12px 0; border-radius:12px; font-size:12px; font-weight:700"></div>
 
 <div class="aero-tabs">
   <button class="aero-tab active" data-tab="calendar" onclick="switchTab('calendar')">📅 Календарь</button>
@@ -1079,7 +1083,13 @@ function showConfirmDelAll(){document.getElementById('confirm-overlay').classLis
 function hideConfirmDelAll(){document.getElementById('confirm-overlay').classList.remove('show')}
 async function delAll(){ await fetch('/reminders/deleteall',{method:'POST'}); location.reload(); }
 
-initCal(); updateFab();
+window.onerror = function(msg, src, line, col, err){
+  const el=document.getElementById('js-error');
+  if(el){ el.style.display='block'; el.textContent='JS error: '+msg+' ('+line+':'+col+')'; }
+};
+try{ initCal(); }catch(e){ const el=document.getElementById('js-error'); if(el){el.style.display='block'; el.textContent='Calendar init error: '+(e.message||e);} console.error(e); }
+try{ updateFab(); }catch(e){ console.error(e); }
+console.log('Secretary Aero {{git_commit}} loaded, calendarEvents:', calendarEvents.length, 'reminders:', reminders.length);
 </script>
 </body>
 </html>
