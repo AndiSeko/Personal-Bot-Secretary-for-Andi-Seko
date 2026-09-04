@@ -79,8 +79,10 @@ def check_auth(request: Request) -> bool:
     return False
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
 async def index(request: Request):
+    if request.method == "HEAD":
+        return HTMLResponse(status_code=200)
     init_data = request.query_params.get("tgWebAppData") or ""
     tg_auth = False
     if init_data and verify_webapp_signature(init_data):
