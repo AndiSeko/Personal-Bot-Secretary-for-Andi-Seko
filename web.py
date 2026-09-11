@@ -101,6 +101,17 @@ async def index(request: Request):
     reminders = await db.get_all_reminders()
     messages = await db.get_messages(limit=50)
     calendar_events = await db.get_all_calendar_events()
+    tasks = await db.get_tasks()
+    notes = await db.get_notes(limit=50)
+    habits = await db.get_habits()
+    expenses = await db.get_expenses(limit=50)
+    watchers = await db.get_watchers()
+    # enrich watchers with urls
+    for w in watchers:
+        w["urls"] = await db.get_watcher_urls(w["id"])
+        # last prices preview
+        w["min_price"] = min([u["last_price"] for u in w["urls"] if u.get("last_price")], default=None)
+        w["max_price"] = max([u["last_price"] for u in w["urls"] if u.get("last_price")], default=None)
 
     active_count = len(reminders)
     cyclic_count = sum(1 for r in reminders if r['is_cyclic'])
@@ -172,10 +183,23 @@ async def index(request: Request):
         "calendar_events": calendar_events,
         "calendar_events_json": _json.dumps(calendar_events, ensure_ascii=False),
         "reminders_json": _json.dumps(reminders, ensure_ascii=False),
+        "tasks": tasks,
+        "tasks_json": _json.dumps(tasks, ensure_ascii=False),
+        "notes": notes,
+        "notes_json": _json.dumps(notes, ensure_ascii=False),
+        "habits": habits,
+        "habits_json": _json.dumps(habits, ensure_ascii=False),
+        "expenses": expenses,
+        "expenses_json": _json.dumps(expenses, ensure_ascii=False),
+        "watchers": watchers,
+        "watchers_json": _json.dumps(watchers, ensure_ascii=False),
         "active_count": active_count,
         "cyclic_count": cyclic_count,
         "msg_count": msg_count,
         "calendar_count": len(calendar_events),
+        "tasks_count": len(tasks),
+        "notes_count": len(notes),
+        "watchers_count": len(watchers),
         "owner_username": config.OWNER_USERNAME,
         "owner_id": config.OWNER_ID or 0,
         "known_users": await db.get_all_known_users(),
@@ -431,6 +455,24 @@ async def api_get_theme(request: Request):
         return JSONResponse({})
 
 
+@app.post("/api/parse_natural")
+async def api_parse_natural(request: Request):
+    if not check_auth(request):
+        return JSONResponse(status_code=403, content={"error":"forbidden"})
+    data = await request.json()
+    text = (data.get("text") or "").strip()
+    if not text:
+        return JSONResponse({"ok": False, "error":"empty"})
+    dt, remaining = utils.parse_natural_remind(text)
+    if dt and remaining:
+        return JSONResponse({"ok": True, "datetime": dt.strftime("%Y-%m-%d %H:%M:%S"), "text": remaining, "display": dt.strftime("%d.%m.%Y %H:%M")})
+    # try ai
+    dt2, rem2 = await utils.parse_with_ai(text)
+    if dt2 and rem2:
+        return JSONResponse({"ok": True, "datetime": dt2.strftime("%Y-%m-%d %H:%M:%S"), "text": rem2, "display": dt2.strftime("%d.%m.%Y %H:%M"), "ai": True})
+    return JSONResponse({"ok": False})
+
+
 @app.post("/api/cleanup")
 async def api_cleanup(request: Request):
     if not check_auth(request):
@@ -457,6 +499,330 @@ async def api_cleanup(request: Request):
             pass
     return JSONResponse({"ok": True, "deleted": result})
 
+
+# ─── Tasks API ───
+@app.get("/api/tasks")
+async def api_tasks(request: Request):
+    if not check_auth(request):
+        return JSONResponse(status_code=403, content={"error":"forbidden"})
+    tasks = await db.get_tasks()
+    for t in tasks:
+        t["items"] = await db.get_task_items(t["id"])
+    return tasks
+
+@app.post("/tasks/add")
+async def tasks_add(request: Request):
+    if not check_auth(request):
+        return RedirectResponse(url="/", status_code=303)
+    form = await request.form()
+    title = (form.get("title") or "").strip()
+    if not title:
+        return RedirectResponse(url="/", status_code=303)
+    desc = (form.get("description") or "").strip()
+    priority = int(form.get("priority", 1) or 1)
+    due = (form.get("due_date") or "").strip() or None
+    tid = await db.add_task(title, desc, priority, due)
+    # subitems
+    items_raw = (form.get("items") or "").strip()
+    if items_raw:
+        for line in items_raw.splitlines():
+            line=line.strip()
+            if line:
+                await db.add_task_item(tid, line)
+    if request.headers.get("accept","").find("json")>=0:
+        return JSONResponse({"ok":True, "id":tid})
+    return RedirectResponse(url="/", status_code=303)
+
+@app.post("/tasks/toggle/{task_id}")
+async def tasks_toggle(request: Request, task_id: int):
+    if not check_auth(request):
+        return RedirectResponse(url="/", status_code=303)
+    await db.toggle_task(task_id)
+    if request.headers.get("accept","").find("json")>=0:
+        return JSONResponse({"ok":True})
+    return RedirectResponse(url="/", status_code=303)
+
+@app.post("/tasks/delete/{task_id}")
+async def tasks_delete(request: Request, task_id: int):
+    if not check_auth(request):
+        return RedirectResponse(url="/", status_code=303)
+    await db.delete_task(task_id)
+    if request.headers.get("accept","").find("json")>=0:
+        return JSONResponse({"ok":True})
+    return RedirectResponse(url="/", status_code=303)
+
+@app.post("/task_items/toggle/{item_id}")
+async def task_item_toggle(request: Request, item_id: int):
+    if not check_auth(request):
+        return JSONResponse(status_code=403, content={})
+    await db.toggle_task_item(item_id)
+    return JSONResponse({"ok":True})
+
+# ─── Notes API ───
+@app.get("/api/notes")
+async def api_notes(request: Request):
+    if not check_auth(request):
+        return JSONResponse(status_code=403, content={})
+    q = request.query_params.get("q")
+    notes = await db.get_notes(search=q)
+    return notes
+
+@app.post("/notes/add")
+async def notes_add(request: Request):
+    if not check_auth(request):
+        return RedirectResponse(url="/", status_code=303)
+    form = await request.form()
+    title = (form.get("title") or "").strip()
+    body = (form.get("body") or "").strip()
+    tags = (form.get("tags") or "").strip()
+    if not title and not body:
+        return RedirectResponse(url="/", status_code=303)
+    if not title:
+        title = body[:30]
+    nid = await db.add_note(title, body, tags)
+    if request.headers.get("accept","").find("json")>=0:
+        return JSONResponse({"ok":True,"id":nid})
+    return RedirectResponse(url="/", status_code=303)
+
+@app.post("/notes/delete/{note_id}")
+async def notes_delete(request: Request, note_id: int):
+    if not check_auth(request):
+        return RedirectResponse(url="/", status_code=303)
+    await db.delete_note(note_id)
+    if request.headers.get("accept","").find("json")>=0:
+        return JSONResponse({"ok":True})
+    return RedirectResponse(url="/", status_code=303)
+
+# ─── Habits & Expenses ───
+@app.get("/api/habits")
+async def api_habits(request: Request):
+    if not check_auth(request):
+        return JSONResponse(status_code=403, content={})
+    return await db.get_habits()
+
+@app.post("/habits/add")
+async def habits_add(request: Request):
+    if not check_auth(request):
+        return RedirectResponse(url="/", status_code=303)
+    form = await request.form()
+    name = (form.get("name") or "").strip()
+    if not name:
+        return RedirectResponse(url="/", status_code=303)
+    hid = await db.add_habit(name)
+    if request.headers.get("accept","").find("json")>=0:
+        return JSONResponse({"ok":True,"id":hid})
+    return RedirectResponse(url="/", status_code=303)
+
+@app.post("/habits/done/{habit_id}")
+async def habits_done(request: Request, habit_id: int):
+    if not check_auth(request):
+        return JSONResponse(status_code=403, content={})
+    await db.mark_habit_done(habit_id)
+    return JSONResponse({"ok":True})
+
+@app.post("/habits/delete/{habit_id}")
+async def habits_delete(request: Request, habit_id: int):
+    if not check_auth(request):
+        return RedirectResponse(url="/", status_code=303)
+    await db.delete_habit(habit_id)
+    if request.headers.get("accept","").find("json")>=0:
+        return JSONResponse({"ok":True})
+    return RedirectResponse(url="/", status_code=303)
+
+@app.get("/api/expenses")
+async def api_expenses(request: Request):
+    if not check_auth(request):
+        return JSONResponse(status_code=403, content={})
+    return await db.get_expenses()
+
+@app.post("/expenses/add")
+async def expenses_add(request: Request):
+    if not check_auth(request):
+        return RedirectResponse(url="/", status_code=303)
+    form = await request.form()
+    try:
+        amount = float(form.get("amount") or 0)
+    except:
+        amount = 0
+    if amount <=0:
+        return RedirectResponse(url="/", status_code=303)
+    cat = (form.get("category") or "other").strip()
+    comment = (form.get("comment") or "").strip()
+    exp_date = (form.get("exp_date") or "").strip() or datetime.now(utils.tz).strftime("%Y-%m-%d")
+    eid = await db.add_expense(amount, cat, comment, exp_date)
+    if request.headers.get("accept","").find("json")>=0:
+        return JSONResponse({"ok":True,"id":eid})
+    return RedirectResponse(url="/", status_code=303)
+
+@app.post("/expenses/delete/{exp_id}")
+async def expenses_delete(request: Request, exp_id: int):
+    if not check_auth(request):
+        return RedirectResponse(url="/", status_code=303)
+    await db.delete_expense(exp_id)
+    if request.headers.get("accept","").find("json")>=0:
+        return JSONResponse({"ok":True})
+    return RedirectResponse(url="/", status_code=303)
+
+# ─── Watchers (BY prices) ───
+@app.get("/api/watchers")
+async def api_watchers(request: Request):
+    if not check_auth(request):
+        return JSONResponse(status_code=403, content={})
+    w = await db.get_watchers()
+    for it in w:
+        it["urls"] = await db.get_watcher_urls(it["id"])
+    return w
+
+@app.post("/watchers/add")
+async def watchers_add(request: Request):
+    if not check_auth(request):
+        return RedirectResponse(url="/", status_code=303)
+    form = await request.form()
+    title = (form.get("title") or "").strip()
+    region = (form.get("region") or "minsk").strip()
+    try:
+        target = float(form.get("target_price") or 0) or None
+    except:
+        target = None
+    interval = int(form.get("check_interval", 3600) or 3600)
+    if not title:
+        return RedirectResponse(url="/", status_code=303)
+    wid = await db.add_watcher(title, region, target, interval)
+    # urls: expect store_url_1, store_url_2 etc or single url+store
+    # support form fields: store, url
+    store = (form.get("store") or "").strip()
+    url = (form.get("url") or "").strip()
+    if url:
+        # auto-detect store from url if not provided
+        if not store:
+            if "21vek" in url: store="21vek"
+            elif "5element" in url: store="5element"
+            elif "evroopt" in url or "e-dostavka" in url: store="evroopt"
+            elif "kopeechka" in url: store="kopeechka"
+            elif "groshyk" in url: store="groshyk"
+            elif "oz.by" in url: store="oz"
+            else: store="other"
+        await db.add_watcher_url(wid, store, url)
+    # alternative: multiple urls via json field urls_json
+    urls_json = form.get("urls_json")
+    if urls_json:
+        try:
+            import json as _j
+            arr = _j.loads(urls_json)
+            for u in arr:
+                await db.add_watcher_url(wid, u.get("store","other"), u.get("url",""), u.get("selector",""))
+        except Exception:
+            pass
+    if request.headers.get("accept","").find("json")>=0:
+        return JSONResponse({"ok":True,"id":wid})
+    return RedirectResponse(url="/", status_code=303)
+
+@app.post("/watchers/delete/{wid}")
+async def watchers_delete(request: Request, wid: int):
+    if not check_auth(request):
+        return RedirectResponse(url="/", status_code=303)
+    await db.delete_watcher(wid)
+    if request.headers.get("accept","").find("json")>=0:
+        return JSONResponse({"ok":True})
+    return RedirectResponse(url="/", status_code=303)
+
+@app.post("/watcher_urls/add")
+async def watcher_urls_add(request: Request):
+    if not check_auth(request):
+        return JSONResponse(status_code=403, content={})
+    data = await request.json()
+    wid = int(data.get("watcher_id") or 0)
+    store = data.get("store") or "other"
+    url = data.get("url") or ""
+    if not wid or not url:
+        return JSONResponse(status_code=400, content={"error":"missing"})
+    nid = await db.add_watcher_url(wid, store, url, data.get("selector",""))
+    return JSONResponse({"ok":True,"id":nid})
+
+@app.get("/api/watchers/preview")
+async def watchers_preview(request: Request, url: str = ""):
+    if not check_auth(request):
+        return JSONResponse(status_code=403, content={})
+    if not url:
+        return JSONResponse({"ok":False,"error":"no url"})
+    # simple fetch and try to extract price (without region for now)
+    try:
+        import httpx, re as _re
+        from bs4 import BeautifulSoup
+        headers = {"User-Agent":"Mozilla/5.0"}
+        async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
+            r = await client.get(url, headers=headers)
+            html = r.text[:20000]
+            soup = BeautifulSoup(html, "lxml")
+            # try common selectors
+            price = None
+            for sel in ['[data-price]', '.price__value', '.price', 'meta[property=\"product:price:amount\"]', '[itemprop=\"price\"]']:
+                el = soup.select_one(sel)
+                if el:
+                    txt = el.get("content") or el.get_text()
+                    m = _re.search(r'(\d+[\.,]\d+|\d+)', txt.replace(" ",""))
+                    if m:
+                        price = float(m.group(1).replace(",","."))
+                        break
+            if not price:
+                # fallback regex
+                m = _re.search(r'(\d+[\.,]\d+)\s*(?:р|BYN|руб)', html)
+                if m:
+                    price = float(m.group(1).replace(",","."))
+            return JSONResponse({"ok": bool(price), "price": price, "title": soup.title.string[:80] if soup.title else ""})
+    except Exception as e:
+        return JSONResponse({"ok":False,"error":str(e)})
+
+@app.get("/api/watchers/history/{url_id}")
+async def watchers_history(request: Request, url_id: int):
+    if not check_auth(request):
+        return JSONResponse(status_code=403, content={})
+    hist = await db.get_price_history(url_id, limit=50)
+    return hist
+
+@app.post("/watchers/check/{wid}")
+async def watchers_check(request: Request, wid: int):
+    if not check_auth(request):
+        return JSONResponse(status_code=403, content={})
+    # trigger manual check via same logic as scheduler (fetch each url)
+    urls = await db.get_watcher_urls(wid)
+    import httpx, re as _re
+    from bs4 import BeautifulSoup
+    w = await db.get_watcher_by_id(wid)
+    region = w.get("region") if w else "minsk"
+    checked = 0
+    for u in urls:
+        try:
+            headers = {"User-Agent":"Mozilla/5.0"}
+            # region cookie example for 21vek
+            cookies = {}
+            if "21vek" in u["url"] and region != "minsk":
+                cookies["city"] = region
+            async with httpx.AsyncClient(timeout=12, follow_redirects=True, cookies=cookies) as client:
+                r = await client.get(u["url"], headers=headers)
+                soup = BeautifulSoup(r.text[:20000], "lxml")
+                price = None
+                for sel in [u.get("selector") or '', '[data-price]', '.price__value', '.price', 'meta[property=\"product:price:amount\"]']:
+                    if not sel:
+                        continue
+                    el = soup.select_one(sel)
+                    if el:
+                        txt = el.get("content") or el.get_text()
+                        m = _re.search(r'(\d+[\.,]\d+|\d+)', txt.replace(" ",""))
+                        if m:
+                            price = float(m.group(1).replace(",","."))
+                            break
+                if price:
+                    await db.update_watcher_url_price(u["id"], price, "ok")
+                    checked += 1
+                else:
+                    await db.update_watcher_url_price(u["id"], 0, "not_found")
+        except Exception as e:
+            try:
+                await db.update_watcher_url_price(u["id"], 0, f"error:{e}"[:50])
+            except:
+                pass
+    return JSONResponse({"ok":True,"checked":checked})
 
 @app.post("/reminders/delete/{reminder_id}")
 async def delete_reminder(request: Request, reminder_id: int):

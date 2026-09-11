@@ -387,9 +387,13 @@ input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-c
 </div>
 <div id="js-error" style="display:none; background:rgba(255,71,87,0.12); border:1px solid rgba(255,71,87,0.25); color:#b91c1c; padding:8px 10px; margin:10px 12px 0; border-radius:12px; font-size:12px; font-weight:700"></div>
 
-<div class="aero-tabs">
+<div class="aero-tabs" style="overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch">
   <button class="aero-tab active" data-tab="calendar" onclick="switchTab('calendar')">📅 Календарь</button>
   <button class="aero-tab" data-tab="reminders" onclick="switchTab('reminders')">🔔 Напоминания</button>
+  <button class="aero-tab" data-tab="tasks" onclick="switchTab('tasks')">📋 Задачи <small style="background:var(--aero-primary); color:#fff; padding:1px 5px; border-radius:8px; font-size:10px">{{tasks_count}}</small></button>
+  <button class="aero-tab" data-tab="notes" onclick="switchTab('notes')">📝 Заметки</button>
+  <button class="aero-tab" data-tab="prices" onclick="switchTab('prices')">💰 Цены BY</button>
+  <button class="aero-tab" data-tab="tracker" onclick="switchTab('tracker')">📊 Трекер</button>
   <button class="aero-tab" data-tab="messages" onclick="switchTab('messages')">💬 Сообщения</button>
 </div>
 
@@ -451,6 +455,125 @@ input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-c
       {% endfor %}
     {% else %}<div class="glass-card empty">Нет сообщений</div>{% endif %}
   </div>
+
+  <div id="panel-tasks" class="panel">
+    <div style="display:flex; gap:8px; margin-bottom:10px">
+      <button class="glass-card cal-action-btn" style="flex:1; padding:10px; font-weight:800; font-size:12px; cursor:pointer; color:var(--aero-text)" onclick="openTaskModal()">+ Задача</button>
+      <button class="glass-card" style="padding:10px; font-weight:700; font-size:12px; cursor:pointer; color:var(--aero-text)" onclick="loadTasks()">↻</button>
+    </div>
+    {% if tasks %}
+      {% for t in tasks %}
+      <div class="glass-card" style="display:flex; align-items:center; gap:10px">
+        <button onclick="toggleTask({{t.id}})" style="width:28px; height:28px; border-radius:8px; border:1px solid var(--aero-border); background: {{ 'var(--aero-primary)' if t.status=='done' else 'var(--aero-glass)' }}; color:#fff; font-weight:800; cursor:pointer">{% if t.status=='done' %}✓{% else %}⬜{% endif %}</button>
+        <div style="flex:1; min-width:0">
+          <div class="card-text" style="padding-right:0; font-size:13px; {% if t.status=='done' %}text-decoration:line-through; opacity:.6{% endif %}">{{t.title}}</div>
+          {% if t.due_date %}<div style="font-size:11px; color:var(--aero-hint); font-weight:700">📅 {{t.due_date}} {% if t.priority>1 %}• приоритет {{t.priority}}{% endif %}</div>{% endif %}
+        </div>
+        <button class="card-del" style="position:static; margin-left:auto" onclick="deleteTask({{t.id}})">✕</button>
+      </div>
+      {% endfor %}
+    {% else %}<div class="glass-card empty">Нет задач — создай первую ✨<br><small style="color:var(--aero-hint)">Задачи с датой появятся в календаре</small></div>{% endif %}
+  </div>
+
+  <div id="panel-notes" class="panel">
+    <div style="display:flex; gap:8px; margin-bottom:10px">
+      <input type="text" id="notes-search" placeholder="Поиск..." oninput="searchNotes()" style="flex:1; padding:10px 12px; border-radius:12px; border:1px solid var(--aero-border); background:var(--aero-glass); color:var(--aero-text); font-size:13px">
+      <button class="glass-card cal-action-btn" style="padding:10px 14px; font-weight:800; font-size:12px; cursor:pointer; color:var(--aero-text)" onclick="openNoteModal()">+ Заметка</button>
+    </div>
+    <div id="notes-list">
+    {% if notes %}
+      {% for n in notes %}
+      <div class="glass-card">
+        <div class="card-top"><span class="card-id">#{{n.id}}</span><span style="font-size:10px; color:var(--aero-hint); font-weight:700">{{n.tags}}</span></div>
+        <div class="card-text">{{n.title}}</div>
+        {% if n.body %}<div class="card-desc">{{n.body[:200]}}</div>{% endif %}
+        <div class="card-meta"><span>{{n.updated_at[:16]}}</span></div>
+        <button class="card-del" onclick="deleteNote({{n.id}})">✕</button>
+      </div>
+      {% endfor %}
+    {% else %}<div class="glass-card empty">Нет заметок — /note в боте или + здесь</div>{% endif %}
+    </div>
+  </div>
+
+  <div id="panel-prices" class="panel">
+    <div style="display:flex; gap:8px; margin-bottom:10px">
+      <button class="glass-card cal-action-btn" style="flex:1; padding:10px; font-weight:800; font-size:12px; cursor:pointer; color:var(--aero-text)" onclick="openWatcherModal()">+ Товар</button>
+      <button class="glass-card" style="padding:10px; font-weight:700; font-size:12px; cursor:pointer; color:var(--aero-text)" onclick="checkAllPrices()">↻ Проверить</button>
+    </div>
+    <div style="font-size:11px; color:var(--aero-hint); font-weight:700; margin-bottom:8px">Без уведомлений — только просмотр и сравнение. Регионы: 6 областей + доставка. Магазины: 21vek, 5element, Евроопт, Копеечка, Грошык, Oz.</div>
+    {% if watchers %}
+      {% for w in watchers %}
+      <div class="glass-card">
+        <div class="card-top"><span class="card-id">#{{w.id}}</span><span class="card-type event">{{w.region}}</span><span style="font-size:11px; color:var(--aero-hint); font-weight:700">{% if w.target_price %}🎯 {{w.target_price}}{% endif %}</span></div>
+        <div class="card-text">{{w.title}}</div>
+        {% if w.urls %}
+        <div style="margin-top:6px; overflow-x:auto">
+          <table style="width:100%; font-size:11px; border-collapse:collapse; font-weight:600">
+            <tr style="color:var(--aero-hint)"><th style="text-align:left; padding:4px">Магазин</th><th style="text-align:right">Цена</th><th style="text-align:center">Статус</th></tr>
+            {% for u in w.urls %}
+            <tr style="border-top:1px solid var(--aero-border)">
+              <td style="padding:4px"><a href="{{u.url}}" target="_blank" style="color:var(--aero-primary); text-decoration:none">{{u.store}}</a></td>
+              <td style="padding:4px; text-align:right; color:{% if w.target_price and u.last_price and u.last_price <= w.target_price %}var(--aero-success){% else %}var(--aero-text){% endif %}">{% if u.last_price %}{{u.last_price}} BYN{% else %}—{% endif %}</td>
+              <td style="padding:4px; text-align:center; font-size:10px">{{u.status or ''}}</td>
+            </tr>
+            {% endfor %}
+          </table>
+        </div>
+        {% if w.min_price and w.max_price and w.min_price != w.max_price %}<div style="font-size:11px; color:var(--aero-hint); margin-top:4px">Δ {{ "%.2f"|format(w.max_price - w.min_price) }} BYN ({{w.min_price}} → {{w.max_price}})</div>{% endif %}
+        {% endif %}
+        <div style="display:flex; gap:6px; margin-top:8px">
+          <button class="glass-card cal-action-btn" style="flex:1; padding:6px; font-size:11px; font-weight:700; cursor:pointer; color:var(--aero-text)" onclick="checkWatcher({{w.id}})">Проверить</button>
+          <button class="card-del" style="position:static" onclick="deleteWatcher({{w.id}})">✕</button>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}<div class="glass-card empty">Нет отслеживаемых товаров — добавь первый ✨<br><small>Вариант A: вручную по URL, Вариант B: поиск по названию (эксперимент)</small></div>{% endif %}
+  </div>
+
+  <div id="panel-tracker" class="panel">
+    <div class="glass-card">
+      <h3 style="font-size:14px; font-weight:800; margin-bottom:8px">🏃 Привычки</h3>
+      <div style="display:flex; gap:6px; margin-bottom:8px">
+        <input type="text" id="habit-name" placeholder="Новая привычка" style="flex:1; padding:10px 12px; border-radius:12px; border:1px solid var(--aero-border); background:var(--aero-glass); color:var(--aero-text); font-size:13px">
+        <button class="glass-card cal-action-btn" style="padding:10px 14px; font-weight:800; cursor:pointer; color:var(--aero-text)" onclick="addHabit()">+</button>
+      </div>
+      <div id="habits-list">
+      {% if habits %}
+        {% for h in habits %}
+        <div class="glass-card" style="padding:10px; display:flex; align-items:center; gap:8px; margin-bottom:6px">
+          <span style="font-weight:800; color:var(--aero-text)">{{h.name}}</span>
+          <span style="font-size:11px; background:var(--aero-primary); color:#fff; padding:2px 6px; border-radius:8px; font-weight:800">🔥 {{h.streak}}</span>
+          <span style="font-size:11px; color:var(--aero-hint)">{{h.last_done or '—'}}</span>
+          <button class="glass-card cal-action-btn" style="margin-left:auto; padding:6px 10px; font-size:11px; font-weight:700; cursor:pointer; color:var(--aero-text)" onclick="doneHabit({{h.id}})">✓</button>
+          <button class="card-del" style="position:static" onclick="deleteHabit({{h.id}})">✕</button>
+        </div>
+        {% endfor %}
+      {% else %}<div style="font-size:12px; color:var(--aero-hint); font-weight:600; text-align:center; padding:8px">Нет привычек</div>{% endif %}
+      </div>
+    </div>
+    <div class="glass-card">
+      <h3 style="font-size:14px; font-weight:800; margin-bottom:8px">💰 Траты</h3>
+      <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap">
+        <input type="number" id="exp-amount" placeholder="Сумма" style="width:90px; padding:10px; border-radius:12px; border:1px solid var(--aero-border); background:var(--aero-glass); color:var(--aero-text); font-size:13px">
+        <input type="text" id="exp-cat" placeholder="категория" style="flex:1; min-width:80px; padding:10px; border-radius:12px; border:1px solid var(--aero-border); background:var(--aero-glass); color:var(--aero-text); font-size:13px" value="еда">
+        <input type="text" id="exp-comment" placeholder="коммент" style="flex:1; min-width:80px; padding:10px; border-radius:12px; border:1px solid var(--aero-border); background:var(--aero-glass); color:var(--aero-text); font-size:13px">
+        <button class="glass-card cal-action-btn" style="padding:10px 14px; font-weight:800; cursor:pointer; color:var(--aero-text)" onclick="addExpense()">+</button>
+      </div>
+      <div id="expenses-list">
+      {% if expenses %}
+        {% for e in expenses %}
+        <div class="glass-card" style="padding:8px 10px; display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:13px">
+          <span style="font-weight:800; color:var(--aero-text)">{{e.amount}} BYN</span>
+          <span style="font-size:11px; background:var(--aero-glass); border:1px solid var(--aero-border); padding:2px 6px; border-radius:8px; color:var(--aero-hint)">{{e.category}}</span>
+          <span style="flex:1; font-size:12px; color:var(--aero-hint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{e.comment}}</span>
+          <span style="font-size:10px; color:var(--aero-hint)">{{e.exp_date}}</span>
+          <button class="card-del" style="position:static" onclick="deleteExpense({{e.id}})">✕</button>
+        </div>
+        {% endfor %}
+      {% else %}<div style="font-size:12px; color:var(--aero-hint); font-weight:600; text-align:center; padding:8px">Нет трат — /spend 500 еда</div>{% endif %}
+      </div>
+    </div>
+  </div>
 </div>
 
 </div> <!-- app-shell -->
@@ -509,6 +632,52 @@ input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-c
       <button class="btn-ok" id="ev-submit" onclick="saveEvent()">Создать</button>
     </div>
     <button id="ev-delete" style="display:none" class="danger-btn" onclick="deleteEvent()">Удалить событие</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="task-modal" onclick="closeTaskModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3><i>📋</i> Новая задача</h3>
+    <label>Название</label><input type="text" id="task-title" placeholder="Купить молоко">
+    <label>Описание</label><textarea id="task-desc" placeholder="Детали..."></textarea>
+    <label>Срок (YYYY-MM-DD)</label><input type="date" id="task-due">
+    <label>Приоритет</label><select id="task-priority"><option value="1">Обычный</option><option value="2">Высокий</option><option value="3">Срочно</option></select>
+    <label>Подзадачи (каждая с новой строки)</label><textarea id="task-items" placeholder="Молоко&#10;Хлеб"></textarea>
+    <div class="modal-btns"><button class="btn-cancel" onclick="closeTaskModal()">Отмена</button><button class="btn-ok" onclick="saveTask()">Создать</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="note-modal" onclick="closeNoteModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3><i>📝</i> Заметка</h3>
+    <label>Заголовок</label><input type="text" id="note-title" placeholder="Идея">
+    <label>Текст</label><textarea id="note-body" placeholder="Содержание..." style="min-height:100px"></textarea>
+    <label>Теги (через запятую)</label><input type="text" id="note-tags" placeholder="работа, идеи">
+    <div class="modal-btns"><button class="btn-cancel" onclick="closeNoteModal()">Отмена</button><button class="btn-ok" onclick="saveNote()">Сохранить</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="watcher-modal" onclick="closeWatcherModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3><i>💰</i> Товар для мониторинга (BY)</h3>
+    <label>Название товара</label><input type="text" id="watcher-title" placeholder="PS5 1TB">
+    <label>Регион</label><select id="watcher-region"><option value="minsk">Минск</option><option value="minsk_oblast">Минская обл.</option><option value="brest">Брест</option><option value="vitebsk">Витебск</option><option value="gomel">Гомель</option><option value="grodno">Гродно</option><option value="mogilev">Могилёв</option><option value="delivery">Доставка</option></select>
+    <label>Целевая цена (подсветка, опционально)</label><input type="number" id="watcher-target" placeholder="50000">
+    <label>Интервал проверки (сек)</label><select id="watcher-interval"><option value="3600">1 час</option><option value="21600">6 часов</option><option value="86400">24 часа</option></select>
+    <div style="margin-top:10px; padding:10px; background:var(--aero-glass); border:1px solid var(--aero-border); border-radius:12px">
+      <b style="font-size:12px">Вариант A — вручную по URL</b>
+      <div id="watcher-urls" style="margin-top:6px"></div>
+      <button type="button" onclick="addWatcherUrlRow()" style="margin-top:6px; padding:6px 10px; border-radius:8px; border:1px solid var(--aero-border); background:var(--aero-glass); color:var(--aero-text); font-weight:700; cursor:pointer">+ URL магазина</button>
+    </div>
+    <div style="margin-top:10px; padding:10px; background:var(--aero-glass); border:1px solid var(--aero-border); border-radius:12px">
+      <b style="font-size:12px">Вариант B — автопоиск (эксперимент)</b>
+      <div style="display:flex; gap:6px; margin-top:6px">
+        <input type="text" id="watcher-search" placeholder="Название для поиска" style="flex:1">
+        <button type="button" onclick="searchWatcher()" style="padding:8px 10px; border-radius:8px; border:1px solid var(--aero-border); background:var(--aero-primary); color:#fff; font-weight:700; cursor:pointer">Найти</button>
+      </div>
+      <div id="watcher-search-res" style="margin-top:6px; font-size:12px"></div>
+    </div>
+    <div class="modal-btns"><button class="btn-cancel" onclick="closeWatcherModal()">Отмена</button><button class="btn-ok" onclick="saveWatcher()">Создать</button></div>
   </div>
 </div>
 
@@ -979,6 +1148,10 @@ function updateFab(){
 function fabAction(){
   if(activeTab==='calendar') openEventModal(calSelectedDate);
   else if(activeTab==='reminders') openModal();
+  else if(activeTab==='tasks') openTaskModal();
+  else if(activeTab==='notes') openNoteModal();
+  else if(activeTab==='prices') openWatcherModal();
+  else if(activeTab==='tracker') openTaskModal();
 }
 
 // calendar logic
@@ -1257,6 +1430,120 @@ async function delReminder(id){ await fetch('/reminders/delete/'+id,{method:'POS
 function showConfirmDelAll(){document.getElementById('confirm-overlay').classList.add('show')}
 function hideConfirmDelAll(){document.getElementById('confirm-overlay').classList.remove('show')}
 async function delAll(){ await fetch('/reminders/deleteall',{method:'POST'}); location.reload(); }
+
+async function runCleanup(){
+  if(!confirm('Удалить все прошедшие одноразовые напоминания и прошедшие события календаря?')) return;
+  const r=await fetch('/api/cleanup',{method:'POST'});
+  const j=await r.json().catch(()=>({}));
+  alert('Готово: удалено напоминаний '+(j.deleted?.reminders||0)+', событий '+(j.deleted?.calendar_events||0));
+  location.reload();
+}
+// Tasks
+function openTaskModal(){ document.getElementById('task-modal').classList.add('show'); }
+function closeTaskModal(e){ if(!e||e.target===e.currentTarget) document.getElementById('task-modal').classList.remove('show'); }
+async function saveTask(){
+  const fd=new FormData();
+  fd.append('title', document.getElementById('task-title').value.trim());
+  fd.append('description', document.getElementById('task-desc').value.trim());
+  fd.append('due_date', document.getElementById('task-due').value);
+  fd.append('priority', document.getElementById('task-priority').value);
+  fd.append('items', document.getElementById('task-items').value);
+  if(!fd.get('title')) return alert('Название?');
+  await fetch('/tasks/add',{method:'POST', body:fd}); location.reload();
+}
+async function toggleTask(id){ await fetch('/tasks/toggle/'+id,{method:'POST'}); location.reload(); }
+async function deleteTask(id){ if(!confirm('Удалить задачу?'))return; await fetch('/tasks/delete/'+id,{method:'POST'}); location.reload(); }
+// Notes
+function openNoteModal(){ document.getElementById('note-modal').classList.add('show'); }
+function closeNoteModal(e){ if(!e||e.target===e.currentTarget) document.getElementById('note-modal').classList.remove('show'); }
+async function saveNote(){
+  const fd=new FormData();
+  fd.append('title', document.getElementById('note-title').value.trim());
+  fd.append('body', document.getElementById('note-body').value.trim());
+  fd.append('tags', document.getElementById('note-tags').value.trim());
+  if(!fd.get('title') && !fd.get('body')) return alert('Заполни');
+  await fetch('/notes/add',{method:'POST', body:fd}); location.reload();
+}
+async function deleteNote(id){ if(!confirm('Удалить?'))return; await fetch('/notes/delete/'+id,{method:'POST'}); location.reload(); }
+async function searchNotes(){
+  const q=document.getElementById('notes-search').value.trim();
+  if(!q) return location.reload();
+  const r=await fetch('/api/notes?q='+encodeURIComponent(q));
+  const data=await r.json();
+  const cont=document.getElementById('notes-list');
+  if(!data.length){ cont.innerHTML='<div class="glass-card empty">Ничего не найдено</div>'; return; }
+  cont.innerHTML=data.map(n=>'<div class="glass-card"><div class="card-top"><span class="card-id">#'+n.id+'</span></div><div class="card-text">'+n.title+'</div><div class="card-desc">'+(n.body||'').slice(0,120)+'</div><button class="card-del" onclick="deleteNote('+n.id+')">✕</button></div>').join('');
+}
+// Habits / Expenses
+async function addHabit(){
+  const name=document.getElementById('habit-name').value.trim();
+  if(!name) return;
+  const fd=new FormData(); fd.append('name', name);
+  await fetch('/habits/add',{method:'POST', body:fd}); location.reload();
+}
+async function doneHabit(id){ await fetch('/habits/done/'+id,{method:'POST'}); location.reload(); }
+async function deleteHabit(id){ if(!confirm('Удалить?'))return; await fetch('/habits/delete/'+id,{method:'POST'}); location.reload(); }
+async function addExpense(){
+  const fd=new FormData();
+  fd.append('amount', document.getElementById('exp-amount').value);
+  fd.append('category', document.getElementById('exp-cat').value);
+  fd.append('comment', document.getElementById('exp-comment').value);
+  fd.append('exp_date', new Date().toISOString().slice(0,10));
+  if(!fd.get('amount')) return alert('Сумма?');
+  await fetch('/expenses/add',{method:'POST', body:fd}); location.reload();
+}
+async function deleteExpense(id){ await fetch('/expenses/delete/'+id,{method:'POST'}); location.reload(); }
+// Watchers
+function openWatcherModal(){ document.getElementById('watcher-urls').innerHTML=''; addWatcherUrlRow(); document.getElementById('watcher-modal').classList.add('show'); }
+function closeWatcherModal(e){ if(!e||e.target===e.currentTarget) document.getElementById('watcher-modal').classList.remove('show'); }
+function addWatcherUrlRow(url='', store=''){
+  const cont=document.getElementById('watcher-urls');
+  const row=document.createElement('div');
+  row.style.cssText='display:flex; gap:6px; margin-top:6px';
+  row.innerHTML='<select style="flex:0 0 110px; padding:8px; border-radius:8px; border:1px solid var(--aero-border); background:var(--aero-glass); color:var(--aero-text); font-size:12px"><option value="21vek">21vek</option><option value="5element">5element</option><option value="evroopt">Евроопт</option><option value="kopeechka">Копеечка</option><option value="groshyk">Грошык</option><option value="oz">Oz</option><option value="other">Другой</option></select><input type="url" placeholder="https://..." style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--aero-border); background:var(--aero-glass); color:var(--aero-text); font-size:12px" value="'+url+'"><button type="button" onclick="this.parentElement.remove()" style="padding:6px 8px; border-radius:8px; border:1px solid var(--aero-border); background:rgba(255,71,87,0.08); color:var(--aero-danger); cursor:pointer">✕</button>';
+  if(store) row.querySelector('select').value=store;
+  cont.appendChild(row);
+}
+async function searchWatcher(){
+  const q=document.getElementById('watcher-search').value.trim();
+  if(!q) return;
+  const res=document.getElementById('watcher-search-res');
+  res.textContent='Поиск...';
+  res.innerHTML='<div style="color:var(--aero-hint);">Автопоиск в разработке — пока добавь URL вручную (Вариант A). Скопируй ссылку на товар из магазина и вставь выше.</div>';
+}
+async function saveWatcher(){
+  const title=document.getElementById('watcher-title').value.trim();
+  if(!title) return alert('Название?');
+  const region=document.getElementById('watcher-region').value;
+  const target=document.getElementById('watcher-target').value;
+  const interval=document.getElementById('watcher-interval').value;
+  const urls=[];
+  document.querySelectorAll('#watcher-urls > div').forEach(row=>{
+    const sel=row.querySelector('select').value;
+    const url=row.querySelector('input').value.trim();
+    if(url) urls.push({store:sel, url});
+  });
+  if(!urls.length) return alert('Добавь хотя бы один URL');
+  const fd=new FormData();
+  fd.append('title', title);
+  fd.append('region', region);
+  fd.append('target_price', target);
+  fd.append('check_interval', interval);
+  fd.append('urls_json', JSON.stringify(urls));
+  fd.append('store', urls[0].store);
+  fd.append('url', urls[0].url);
+  await fetch('/watchers/add',{method:'POST', body:fd}); location.reload();
+}
+async function deleteWatcher(id){ if(!confirm('Удалить товар?'))return; await fetch('/watchers/delete/'+id,{method:'POST'}); location.reload(); }
+async function checkWatcher(id){ await fetch('/watchers/check/'+id,{method:'POST'}); location.reload(); }
+async function checkAllPrices(){ 
+  const btns=document.querySelectorAll('[onclick^="checkWatcher"]');
+  const ids=[];
+  btns.forEach(b=>{const m=b.getAttribute('onclick').match(/\d+/); if(m) ids.push(m[0])});
+  for(const id of ids){ await fetch('/watchers/check/'+id,{method:'POST'}); }
+  location.reload();
+}
+
 async function runCleanup(){
   if(!confirm('Удалить все прошедшие одноразовые напоминания и прошедшие события календаря?')) return;
   const r=await fetch('/api/cleanup',{method:'POST'});

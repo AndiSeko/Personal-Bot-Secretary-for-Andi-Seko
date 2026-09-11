@@ -108,6 +108,97 @@ async def init_db():
                     updated_at TEXT DEFAULT (now()::text)
                 );
             """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS tasks (
+                    id SERIAL PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    description TEXT DEFAULT '',
+                    status TEXT DEFAULT 'open',
+                    priority INTEGER DEFAULT 1,
+                    due_date TEXT,
+                    parent_id INTEGER,
+                    calendar_event_id INTEGER,
+                    created_at TEXT DEFAULT (now()::text)
+                );
+            """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS task_items (
+                    id SERIAL PRIMARY KEY,
+                    task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+                    text TEXT NOT NULL,
+                    is_done INTEGER DEFAULT 0,
+                    created_at TEXT DEFAULT (now()::text)
+                );
+            """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS notes (
+                    id SERIAL PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    body TEXT DEFAULT '',
+                    tags TEXT DEFAULT '',
+                    embedding TEXT,
+                    created_at TEXT DEFAULT (now()::text),
+                    updated_at TEXT DEFAULT (now()::text)
+                );
+            """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS habits (
+                    id SERIAL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    streak INTEGER DEFAULT 0,
+                    last_done TEXT,
+                    created_at TEXT DEFAULT (now()::text)
+                );
+            """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS habit_logs (
+                    id SERIAL PRIMARY KEY,
+                    habit_id INTEGER NOT NULL REFERENCES habits(id) ON DELETE CASCADE,
+                    done_date TEXT NOT NULL,
+                    created_at TEXT DEFAULT (now()::text)
+                );
+            """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS expenses (
+                    id SERIAL PRIMARY KEY,
+                    amount REAL NOT NULL,
+                    category TEXT DEFAULT 'other',
+                    comment TEXT DEFAULT '',
+                    exp_date TEXT NOT NULL,
+                    created_at TEXT DEFAULT (now()::text)
+                );
+            """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS watchers (
+                    id SERIAL PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    region TEXT DEFAULT 'minsk',
+                    target_price REAL,
+                    check_interval INTEGER DEFAULT 3600,
+                    is_active INTEGER DEFAULT 1,
+                    created_at TEXT DEFAULT (now()::text)
+                );
+            """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS watcher_urls (
+                    id SERIAL PRIMARY KEY,
+                    watcher_id INTEGER NOT NULL REFERENCES watchers(id) ON DELETE CASCADE,
+                    store TEXT NOT NULL,
+                    url TEXT NOT NULL,
+                    selector TEXT DEFAULT '',
+                    last_price REAL,
+                    last_check TEXT,
+                    status TEXT DEFAULT 'ok'
+                );
+            """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS price_history (
+                    id SERIAL PRIMARY KEY,
+                    watcher_url_id INTEGER NOT NULL REFERENCES watcher_urls(id) ON DELETE CASCADE,
+                    price REAL NOT NULL,
+                    checked_at TEXT DEFAULT (now()::text)
+                );
+            """)
             # Ensure target_chat_id column exists (for old DBs)
             try:
                 await conn.execute("ALTER TABLE reminders ADD COLUMN IF NOT EXISTS target_chat_id BIGINT")
@@ -177,6 +268,83 @@ async def init_db():
                 value TEXT NOT NULL,
                 updated_at TEXT DEFAULT (datetime('now'))
             );
+            CREATE TABLE IF NOT EXISTS tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT DEFAULT '',
+                status TEXT DEFAULT 'open',
+                priority INTEGER DEFAULT 1,
+                due_date TEXT,
+                parent_id INTEGER,
+                calendar_event_id INTEGER,
+                created_at TEXT DEFAULT (datetime('now'))
+            );
+            CREATE TABLE IF NOT EXISTS task_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id INTEGER NOT NULL,
+                text TEXT NOT NULL,
+                is_done INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT (datetime('now')),
+                FOREIGN KEY(task_id) REFERENCES tasks(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS notes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                body TEXT DEFAULT '',
+                tags TEXT DEFAULT '',
+                embedding TEXT,
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT DEFAULT (datetime('now'))
+            );
+            CREATE TABLE IF NOT EXISTS habits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                streak INTEGER DEFAULT 0,
+                last_done TEXT,
+                created_at TEXT DEFAULT (datetime('now'))
+            );
+            CREATE TABLE IF NOT EXISTS habit_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                habit_id INTEGER NOT NULL,
+                done_date TEXT NOT NULL,
+                created_at TEXT DEFAULT (datetime('now')),
+                FOREIGN KEY(habit_id) REFERENCES habits(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS expenses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                amount REAL NOT NULL,
+                category TEXT DEFAULT 'other',
+                comment TEXT DEFAULT '',
+                exp_date TEXT NOT NULL,
+                created_at TEXT DEFAULT (datetime('now'))
+            );
+            CREATE TABLE IF NOT EXISTS watchers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                region TEXT DEFAULT 'minsk',
+                target_price REAL,
+                check_interval INTEGER DEFAULT 3600,
+                is_active INTEGER DEFAULT 1,
+                created_at TEXT DEFAULT (datetime('now'))
+            );
+            CREATE TABLE IF NOT EXISTS watcher_urls (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                watcher_id INTEGER NOT NULL,
+                store TEXT NOT NULL,
+                url TEXT NOT NULL,
+                selector TEXT DEFAULT '',
+                last_price REAL,
+                last_check TEXT,
+                status TEXT DEFAULT 'ok',
+                FOREIGN KEY(watcher_id) REFERENCES watchers(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS price_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                watcher_url_id INTEGER NOT NULL,
+                price REAL NOT NULL,
+                checked_at TEXT DEFAULT (datetime('now')),
+                FOREIGN KEY(watcher_url_id) REFERENCES watcher_urls(id) ON DELETE CASCADE
+            );
         """)
         await db.commit()
 
@@ -221,6 +389,22 @@ async def migrate_db():
                 await conn.execute("ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS target_chat_id BIGINT")
             except Exception:
                 pass
+            # new tables for all-features update
+            for _q in [
+                """CREATE TABLE IF NOT EXISTS tasks (id SERIAL PRIMARY KEY, title TEXT NOT NULL, description TEXT DEFAULT '', status TEXT DEFAULT 'open', priority INTEGER DEFAULT 1, due_date TEXT, parent_id INTEGER, calendar_event_id INTEGER, created_at TEXT DEFAULT (now()::text))""",
+                """CREATE TABLE IF NOT EXISTS task_items (id SERIAL PRIMARY KEY, task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE, text TEXT NOT NULL, is_done INTEGER DEFAULT 0, created_at TEXT DEFAULT (now()::text))""",
+                """CREATE TABLE IF NOT EXISTS notes (id SERIAL PRIMARY KEY, title TEXT NOT NULL, body TEXT DEFAULT '', tags TEXT DEFAULT '', embedding TEXT, created_at TEXT DEFAULT (now()::text), updated_at TEXT DEFAULT (now()::text))""",
+                """CREATE TABLE IF NOT EXISTS habits (id SERIAL PRIMARY KEY, name TEXT NOT NULL, streak INTEGER DEFAULT 0, last_done TEXT, created_at TEXT DEFAULT (now()::text))""",
+                """CREATE TABLE IF NOT EXISTS habit_logs (id SERIAL PRIMARY KEY, habit_id INTEGER NOT NULL REFERENCES habits(id) ON DELETE CASCADE, done_date TEXT NOT NULL, created_at TEXT DEFAULT (now()::text))""",
+                """CREATE TABLE IF NOT EXISTS expenses (id SERIAL PRIMARY KEY, amount REAL NOT NULL, category TEXT DEFAULT 'other', comment TEXT DEFAULT '', exp_date TEXT NOT NULL, created_at TEXT DEFAULT (now()::text))""",
+                """CREATE TABLE IF NOT EXISTS watchers (id SERIAL PRIMARY KEY, title TEXT NOT NULL, region TEXT DEFAULT 'minsk', target_price REAL, check_interval INTEGER DEFAULT 3600, is_active INTEGER DEFAULT 1, created_at TEXT DEFAULT (now()::text))""",
+                """CREATE TABLE IF NOT EXISTS watcher_urls (id SERIAL PRIMARY KEY, watcher_id INTEGER NOT NULL REFERENCES watchers(id) ON DELETE CASCADE, store TEXT NOT NULL, url TEXT NOT NULL, selector TEXT DEFAULT '', last_price REAL, last_check TEXT, status TEXT DEFAULT 'ok')""",
+                """CREATE TABLE IF NOT EXISTS price_history (id SERIAL PRIMARY KEY, watcher_url_id INTEGER NOT NULL REFERENCES watcher_urls(id) ON DELETE CASCADE, price REAL NOT NULL, checked_at TEXT DEFAULT (now()::text))""",
+            ]:
+                try:
+                    await conn.execute(_q)
+                except Exception:
+                    pass
         return
     async with _aiosqlite.connect(DB_PATH) as db:
         try:
@@ -253,6 +437,90 @@ async def migrate_db():
                     key TEXT PRIMARY KEY,
                     value TEXT NOT NULL,
                     updated_at TEXT DEFAULT (datetime('now'))
+                );
+            """)
+            await db.commit()
+        except Exception:
+            pass
+        # new tables
+        try:
+            await db.executescript("""
+                CREATE TABLE IF NOT EXISTS tasks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    description TEXT DEFAULT '',
+                    status TEXT DEFAULT 'open',
+                    priority INTEGER DEFAULT 1,
+                    due_date TEXT,
+                    parent_id INTEGER,
+                    calendar_event_id INTEGER,
+                    created_at TEXT DEFAULT (datetime('now'))
+                );
+                CREATE TABLE IF NOT EXISTS task_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    task_id INTEGER NOT NULL,
+                    text TEXT NOT NULL,
+                    is_done INTEGER DEFAULT 0,
+                    created_at TEXT DEFAULT (datetime('now')),
+                    FOREIGN KEY(task_id) REFERENCES tasks(id) ON DELETE CASCADE
+                );
+                CREATE TABLE IF NOT EXISTS notes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    body TEXT DEFAULT '',
+                    tags TEXT DEFAULT '',
+                    embedding TEXT,
+                    created_at TEXT DEFAULT (datetime('now')),
+                    updated_at TEXT DEFAULT (datetime('now'))
+                );
+                CREATE TABLE IF NOT EXISTS habits (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    streak INTEGER DEFAULT 0,
+                    last_done TEXT,
+                    created_at TEXT DEFAULT (datetime('now'))
+                );
+                CREATE TABLE IF NOT EXISTS habit_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    habit_id INTEGER NOT NULL,
+                    done_date TEXT NOT NULL,
+                    created_at TEXT DEFAULT (datetime('now')),
+                    FOREIGN KEY(habit_id) REFERENCES habits(id) ON DELETE CASCADE
+                );
+                CREATE TABLE IF NOT EXISTS expenses (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    amount REAL NOT NULL,
+                    category TEXT DEFAULT 'other',
+                    comment TEXT DEFAULT '',
+                    exp_date TEXT NOT NULL,
+                    created_at TEXT DEFAULT (datetime('now'))
+                );
+                CREATE TABLE IF NOT EXISTS watchers (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    region TEXT DEFAULT 'minsk',
+                    target_price REAL,
+                    check_interval INTEGER DEFAULT 3600,
+                    is_active INTEGER DEFAULT 1,
+                    created_at TEXT DEFAULT (datetime('now'))
+                );
+                CREATE TABLE IF NOT EXISTS watcher_urls (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    watcher_id INTEGER NOT NULL,
+                    store TEXT NOT NULL,
+                    url TEXT NOT NULL,
+                    selector TEXT DEFAULT '',
+                    last_price REAL,
+                    last_check TEXT,
+                    status TEXT DEFAULT 'ok',
+                    FOREIGN KEY(watcher_id) REFERENCES watchers(id) ON DELETE CASCADE
+                );
+                CREATE TABLE IF NOT EXISTS price_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    watcher_url_id INTEGER NOT NULL,
+                    price REAL NOT NULL,
+                    checked_at TEXT DEFAULT (datetime('now')),
+                    FOREIGN KEY(watcher_url_id) REFERENCES watcher_urls(id) ON DELETE CASCADE
                 );
             """)
             await db.commit()
@@ -664,3 +932,506 @@ async def cleanup_expired(grace_hours: int = 0) -> dict:
     r = await delete_expired_reminders()
     c = await delete_expired_calendar_events(grace_hours=grace_hours)
     return {"reminders": r, "calendar_events": c}
+
+
+# ─── Tasks (чеклисты) ───
+
+async def add_task(title: str, description: str = "", priority: int = 1, due_date: str | None = None, parent_id: int | None = None) -> int:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow("INSERT INTO tasks (title, description, priority, due_date, parent_id) VALUES ($1,$2,$3,$4,$5) RETURNING id", title, description, priority, due_date, parent_id)
+            return row["id"]
+    async with _aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute("INSERT INTO tasks (title, description, priority, due_date, parent_id) VALUES (?,?,?,?,?)", (title, description, priority, due_date, parent_id))
+        await db.commit()
+        return cur.lastrowid
+
+async def get_tasks(status: str | None = None) -> list[dict]:
+    q = "SELECT * FROM tasks ORDER BY CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date, priority DESC, id DESC"
+    if status:
+        q = "SELECT * FROM tasks WHERE status=$1 ORDER BY due_date" if _is_postgres() else "SELECT * FROM tasks WHERE status=? ORDER BY due_date"
+        if _is_postgres():
+            pool = await _get_pool()
+            async with pool.acquire() as conn:
+                rows = await conn.fetch(q, status)
+                return [dict(r) for r in rows]
+        async with _aiosqlite.connect(DB_PATH) as db:
+            db.row_factory = _aiosqlite.Row
+            async with db.execute(q, (status,)) as cur:
+                rows = await cur.fetchall()
+                return [dict(r) for r in rows]
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(q)
+            return [dict(r) for r in rows]
+    async with _aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = _aiosqlite.Row
+        async with db.execute(q) as cur:
+            rows = await cur.fetchall()
+            return [dict(r) for r in rows]
+
+async def get_task_by_id(task_id: int) -> dict | None:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT * FROM tasks WHERE id=$1", task_id)
+            return dict(row) if row else None
+    async with _aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = _aiosqlite.Row
+        async with db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)) as cur:
+            row = await cur.fetchone()
+            return dict(row) if row else None
+
+async def update_task(task_id: int, title: str | None = None, description: str | None = None, status: str | None = None, priority: int | None = None, due_date: str | None = None):
+    # simple patch: only update provided
+    fields = []
+    vals = []
+    if title is not None:
+        fields.append("title")
+        vals.append(title)
+    if description is not None:
+        fields.append("description")
+        vals.append(description)
+    if status is not None:
+        fields.append("status")
+        vals.append(status)
+    if priority is not None:
+        fields.append("priority")
+        vals.append(priority)
+    if due_date is not None:
+        fields.append("due_date")
+        vals.append(due_date)
+    if not fields:
+        return
+    set_clause = ", ".join([f"{f}=${i+1}" if _is_postgres() else f"{f}=?" for i,f in enumerate(fields)])
+    vals.append(task_id)
+    q = f"UPDATE tasks SET {set_clause} WHERE id=${len(vals)}" if _is_postgres() else f"UPDATE tasks SET {set_clause} WHERE id=?"
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute(q, *vals)
+        return
+    async with _aiosqlite.connect(DB_PATH) as db:
+        await db.execute(q, tuple(vals))
+        await db.commit()
+
+async def delete_task(task_id: int) -> bool:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            res = await conn.execute("DELETE FROM tasks WHERE id=$1", task_id)
+            return res.split()[-1] != "0"
+    async with _aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM task_items WHERE task_id=?", (task_id,))
+        cur = await db.execute("DELETE FROM tasks WHERE id=?", (task_id,))
+        await db.commit()
+        return cur.rowcount > 0
+
+async def toggle_task(task_id: int) -> str | None:
+    task = await get_task_by_id(task_id)
+    if not task:
+        return None
+    new_status = "done" if task["status"] != "done" else "open"
+    await update_task(task_id, status=new_status)
+    return new_status
+
+async def add_task_item(task_id: int, text: str) -> int:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow("INSERT INTO task_items (task_id, text) VALUES ($1,$2) RETURNING id", task_id, text)
+            return row["id"]
+    async with _aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute("INSERT INTO task_items (task_id, text) VALUES (?,?)", (task_id, text))
+        await db.commit()
+        return cur.lastrowid
+
+async def get_task_items(task_id: int) -> list[dict]:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch("SELECT * FROM task_items WHERE task_id=$1 ORDER BY id", task_id)
+            return [dict(r) for r in rows]
+    async with _aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = _aiosqlite.Row
+        async with db.execute("SELECT * FROM task_items WHERE task_id=? ORDER BY id", (task_id,)) as cur:
+            rows = await cur.fetchall()
+            return [dict(r) for r in rows]
+
+async def toggle_task_item(item_id: int) -> bool | None:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT is_done FROM task_items WHERE id=$1", item_id)
+            if not row:
+                return None
+            new = 0 if row["is_done"] else 1
+            await conn.execute("UPDATE task_items SET is_done=$1 WHERE id=$2", new, item_id)
+            return bool(new)
+    async with _aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT is_done FROM task_items WHERE id=?", (item_id,)) as cur:
+            row = await cur.fetchone()
+            if not row:
+                return None
+            new = 0 if row[0] else 1
+            await db.execute("UPDATE task_items SET is_done=? WHERE id=?", (new, item_id))
+            await db.commit()
+            return bool(new)
+
+async def delete_task_item(item_id: int) -> bool:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            res = await conn.execute("DELETE FROM task_items WHERE id=$1", item_id)
+            return res.split()[-1] != "0"
+    async with _aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute("DELETE FROM task_items WHERE id=?", (item_id,))
+        await db.commit()
+        return cur.rowcount > 0
+
+
+# ─── Notes ───
+
+async def add_note(title: str, body: str, tags: str = "") -> int:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow("INSERT INTO notes (title, body, tags) VALUES ($1,$2,$3) RETURNING id", title, body, tags)
+            return row["id"]
+    async with _aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute("INSERT INTO notes (title, body, tags) VALUES (?,?,?)", (title, body, tags))
+        await db.commit()
+        return cur.lastrowid
+
+async def get_notes(limit: int = 100, search: str | None = None) -> list[dict]:
+    if search:
+        like = f"%{search}%"
+        if _is_postgres():
+            pool = await _get_pool()
+            async with pool.acquire() as conn:
+                rows = await conn.fetch("SELECT * FROM notes WHERE title ILIKE $1 OR body ILIKE $1 OR tags ILIKE $1 ORDER BY updated_at DESC LIMIT $2", like, limit)
+                return [dict(r) for r in rows]
+        async with _aiosqlite.connect(DB_PATH) as db:
+            db.row_factory = _aiosqlite.Row
+            async with db.execute("SELECT * FROM notes WHERE title LIKE ? OR body LIKE ? OR tags LIKE ? ORDER BY updated_at DESC LIMIT ?", (like, like, like, limit)) as cur:
+                rows = await cur.fetchall()
+                return [dict(r) for r in rows]
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch("SELECT * FROM notes ORDER BY updated_at DESC LIMIT $1", limit)
+            return [dict(r) for r in rows]
+    async with _aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = _aiosqlite.Row
+        async with db.execute("SELECT * FROM notes ORDER BY updated_at DESC LIMIT ?", (limit,)) as cur:
+            rows = await cur.fetchall()
+            return [dict(r) for r in rows]
+
+async def get_note_by_id(note_id: int) -> dict | None:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT * FROM notes WHERE id=$1", note_id)
+            return dict(row) if row else None
+    async with _aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = _aiosqlite.Row
+        async with db.execute("SELECT * FROM notes WHERE id=?", (note_id,)) as cur:
+            row = await cur.fetchone()
+            return dict(row) if row else None
+
+async def update_note(note_id: int, title: str | None = None, body: str | None = None, tags: str | None = None):
+    fields = []
+    vals = []
+    if title is not None:
+        fields.append("title")
+        vals.append(title)
+    if body is not None:
+        fields.append("body")
+        vals.append(body)
+    if tags is not None:
+        fields.append("tags")
+        vals.append(tags)
+    if not fields:
+        return
+    fields.append("updated_at")
+    vals.append(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    set_clause = ", ".join([f"{f}=${i+1}" if _is_postgres() else f"{f}=?" for i,f in enumerate(fields)])
+    vals.append(note_id)
+    q = f"UPDATE notes SET {set_clause} WHERE id=${len(vals)}" if _is_postgres() else f"UPDATE notes SET {set_clause} WHERE id=?"
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute(q, *vals)
+        return
+    async with _aiosqlite.connect(DB_PATH) as db:
+        await db.execute(q, tuple(vals))
+        await db.commit()
+
+async def delete_note(note_id: int) -> bool:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            res = await conn.execute("DELETE FROM notes WHERE id=$1", note_id)
+            return res.split()[-1] != "0"
+    async with _aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute("DELETE FROM notes WHERE id=?", (note_id,))
+        await db.commit()
+        return cur.rowcount > 0
+
+
+# ─── Habits ───
+
+async def add_habit(name: str) -> int:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow("INSERT INTO habits (name) VALUES ($1) RETURNING id", name)
+            return row["id"]
+    async with _aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute("INSERT INTO habits (name) VALUES (?)", (name,))
+        await db.commit()
+        return cur.lastrowid
+
+async def get_habits() -> list[dict]:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch("SELECT * FROM habits ORDER BY created_at")
+            return [dict(r) for r in rows]
+    async with _aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = _aiosqlite.Row
+        async with db.execute("SELECT * FROM habits ORDER BY created_at") as cur:
+            rows = await cur.fetchall()
+            return [dict(r) for r in rows]
+
+async def delete_habit(habit_id: int) -> bool:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            res = await conn.execute("DELETE FROM habits WHERE id=$1", habit_id)
+            return res.split()[-1] != "0"
+    async with _aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM habit_logs WHERE habit_id=?", (habit_id,))
+        cur = await db.execute("DELETE FROM habits WHERE id=?", (habit_id,))
+        await db.commit()
+        return cur.rowcount > 0
+
+async def mark_habit_done(habit_id: int, done_date: str | None = None) -> int:
+    from datetime import datetime as _dt
+    import pytz as _pytz, config as _cfg
+    _tz = _pytz.timezone(_cfg.TIMEZONE)
+    if done_date is None:
+        done_date = _dt.now(_tz).strftime("%Y-%m-%d")
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            # avoid duplicate
+            exists = await conn.fetchrow("SELECT id FROM habit_logs WHERE habit_id=$1 AND done_date=$2", habit_id, done_date)
+            if exists:
+                return exists["id"]
+            row = await conn.fetchrow("INSERT INTO habit_logs (habit_id, done_date) VALUES ($1,$2) RETURNING id", habit_id, done_date)
+            # update streak (naive: count logs)
+            cnt = await conn.fetchval("SELECT COUNT(*) FROM habit_logs WHERE habit_id=$1", habit_id)
+            await conn.execute("UPDATE habits SET streak=$1, last_done=$2 WHERE id=$3", cnt, done_date, habit_id)
+            return row["id"]
+    async with _aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT id FROM habit_logs WHERE habit_id=? AND done_date=?", (habit_id, done_date)) as cur:
+            row = await cur.fetchone()
+            if row:
+                return row[0]
+        cur = await db.execute("INSERT INTO habit_logs (habit_id, done_date) VALUES (?,?)", (habit_id, done_date))
+        await db.commit()
+        # update streak
+        async with db.execute("SELECT COUNT(*) FROM habit_logs WHERE habit_id=?", (habit_id,)) as cur2:
+            cnt = (await cur2.fetchone())[0]
+        await db.execute("UPDATE habits SET streak=?, last_done=? WHERE id=?", (cnt, done_date, habit_id))
+        await db.commit()
+        return cur.lastrowid
+
+async def get_habit_logs(habit_id: int) -> list[dict]:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch("SELECT * FROM habit_logs WHERE habit_id=$1 ORDER BY done_date DESC", habit_id)
+            return [dict(r) for r in rows]
+    async with _aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = _aiosqlite.Row
+        async with db.execute("SELECT * FROM habit_logs WHERE habit_id=? ORDER BY done_date DESC", (habit_id,)) as cur:
+            rows = await cur.fetchall()
+            return [dict(r) for r in rows]
+
+
+# ─── Expenses ───
+
+async def add_expense(amount: float, category: str, comment: str, exp_date: str) -> int:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow("INSERT INTO expenses (amount, category, comment, exp_date) VALUES ($1,$2,$3,$4) RETURNING id", amount, category, comment, exp_date)
+            return row["id"]
+    async with _aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute("INSERT INTO expenses (amount, category, comment, exp_date) VALUES (?,?,?,?)", (amount, category, comment, exp_date))
+        await db.commit()
+        return cur.lastrowid
+
+async def get_expenses(limit: int = 100) -> list[dict]:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch("SELECT * FROM expenses ORDER BY exp_date DESC, id DESC LIMIT $1", limit)
+            return [dict(r) for r in rows]
+    async with _aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = _aiosqlite.Row
+        async with db.execute("SELECT * FROM expenses ORDER BY exp_date DESC, id DESC LIMIT ?", (limit,)) as cur:
+            rows = await cur.fetchall()
+            return [dict(r) for r in rows]
+
+async def delete_expense(exp_id: int) -> bool:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            res = await conn.execute("DELETE FROM expenses WHERE id=$1", exp_id)
+            return res.split()[-1] != "0"
+    async with _aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute("DELETE FROM expenses WHERE id=?", (exp_id,))
+        await db.commit()
+        return cur.rowcount > 0
+
+async def get_expense_stats() -> dict:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT COALESCE(SUM(amount),0) as total, COUNT(*) as cnt FROM expenses")
+            return dict(row) if row else {"total":0,"cnt":0}
+    async with _aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT COALESCE(SUM(amount),0) as total, COUNT(*) as cnt FROM expenses") as cur:
+            row = await cur.fetchone()
+            return {"total": row[0], "cnt": row[1]} if row else {"total":0,"cnt":0}
+
+
+# ─── Watchers (BY price) ───
+
+async def add_watcher(title: str, region: str, target_price: float | None, check_interval: int) -> int:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow("INSERT INTO watchers (title, region, target_price, check_interval) VALUES ($1,$2,$3,$4) RETURNING id", title, region, target_price, check_interval)
+            return row["id"]
+    async with _aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute("INSERT INTO watchers (title, region, target_price, check_interval) VALUES (?,?,?,?)", (title, region, target_price, check_interval))
+        await db.commit()
+        return cur.lastrowid
+
+async def get_watchers() -> list[dict]:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch("SELECT * FROM watchers ORDER BY created_at DESC")
+            return [dict(r) for r in rows]
+    async with _aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = _aiosqlite.Row
+        async with db.execute("SELECT * FROM watchers ORDER BY created_at DESC") as cur:
+            rows = await cur.fetchall()
+            return [dict(r) for r in rows]
+
+async def get_watcher_by_id(wid: int) -> dict | None:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT * FROM watchers WHERE id=$1", wid)
+            return dict(row) if row else None
+    async with _aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = _aiosqlite.Row
+        async with db.execute("SELECT * FROM watchers WHERE id=?", (wid,)) as cur:
+            row = await cur.fetchone()
+            return dict(row) if row else None
+
+async def delete_watcher(wid: int) -> bool:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            res = await conn.execute("DELETE FROM watchers WHERE id=$1", wid)
+            return res.split()[-1] != "0"
+    async with _aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM price_history WHERE watcher_url_id IN (SELECT id FROM watcher_urls WHERE watcher_id=?)", (wid,))
+        await db.execute("DELETE FROM watcher_urls WHERE watcher_id=?", (wid,))
+        cur = await db.execute("DELETE FROM watchers WHERE id=?", (wid,))
+        await db.commit()
+        return cur.rowcount > 0
+
+async def add_watcher_url(watcher_id: int, store: str, url: str, selector: str = "") -> int:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow("INSERT INTO watcher_urls (watcher_id, store, url, selector) VALUES ($1,$2,$3,$4) RETURNING id", watcher_id, store, url, selector)
+            return row["id"]
+    async with _aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute("INSERT INTO watcher_urls (watcher_id, store, url, selector) VALUES (?,?,?,?)", (watcher_id, store, url, selector))
+        await db.commit()
+        return cur.lastrowid
+
+async def get_watcher_urls(watcher_id: int) -> list[dict]:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch("SELECT * FROM watcher_urls WHERE watcher_id=$1 ORDER BY id", watcher_id)
+            return [dict(r) for r in rows]
+    async with _aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = _aiosqlite.Row
+        async with db.execute("SELECT * FROM watcher_urls WHERE watcher_id=? ORDER BY id", (watcher_id,)) as cur:
+            rows = await cur.fetchall()
+            return [dict(r) for r in rows]
+
+async def get_all_watcher_urls() -> list[dict]:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch("SELECT * FROM watcher_urls ORDER BY watcher_id")
+            return [dict(r) for r in rows]
+    async with _aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = _aiosqlite.Row
+        async with db.execute("SELECT * FROM watcher_urls ORDER BY watcher_id") as cur:
+            rows = await cur.fetchall()
+            return [dict(r) for r in rows]
+
+async def update_watcher_url_price(url_id: int, price: float, status: str = "ok"):
+    from datetime import datetime as _dt
+    import pytz as _pytz, config as _cfg
+    _tz = _pytz.timezone(_cfg.TIMEZONE)
+    now = _dt.now(_tz).strftime("%Y-%m-%d %H:%M:%S")
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute("UPDATE watcher_urls SET last_price=$1, last_check=$2, status=$3 WHERE id=$4", price, now, status, url_id)
+            await conn.execute("INSERT INTO price_history (watcher_url_id, price) VALUES ($1,$2)", url_id, price)
+        return
+    async with _aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE watcher_urls SET last_price=?, last_check=?, status=? WHERE id=?", (price, now, status, url_id))
+        await db.execute("INSERT INTO price_history (watcher_url_id, price) VALUES (?,?)", (url_id, price))
+        await db.commit()
+
+async def get_price_history(watcher_url_id: int, limit: int = 50) -> list[dict]:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch("SELECT * FROM price_history WHERE watcher_url_id=$1 ORDER BY checked_at DESC LIMIT $2", watcher_url_id, limit)
+            return [dict(r) for r in rows]
+    async with _aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = _aiosqlite.Row
+        async with db.execute("SELECT * FROM price_history WHERE watcher_url_id=? ORDER BY checked_at DESC LIMIT ?", (watcher_url_id, limit)) as cur:
+            rows = await cur.fetchall()
+            return [dict(r) for r in rows]
+
+async def delete_watcher_url(url_id: int) -> bool:
+    if _is_postgres():
+        pool = await _get_pool()
+        async with pool.acquire() as conn:
+            res = await conn.execute("DELETE FROM watcher_urls WHERE id=$1", url_id)
+            return res.split()[-1] != "0"
+    async with _aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM price_history WHERE watcher_url_id=?", (url_id,))
+        cur = await db.execute("DELETE FROM watcher_urls WHERE id=?", (url_id,))
+        await db.commit()
+        return cur.rowcount > 0
