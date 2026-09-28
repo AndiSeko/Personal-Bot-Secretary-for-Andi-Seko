@@ -26,7 +26,15 @@ async def _get_pool():
         if _pool is not None:
             return _pool
         import asyncpg
-        _pool = await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=5)
+        # min_size=2/max_size=10 — index() шлёт ~10 запросов параллельно (gather);
+        # timeout=10/command_timeout=15 — не висеть на мёртвом коннекте;
+        # max_inactive_connection_lifetime=120 — Neon Free гасит idle-коннекты,
+        # пул пересоздаёт их раньше, чем Neon убьёт (иначе первый запрос после сна падает).
+        _pool = await asyncpg.create_pool(
+            DATABASE_URL, min_size=2, max_size=10,
+            timeout=10, command_timeout=15,
+            max_inactive_connection_lifetime=120,
+        )
         return _pool
 
 

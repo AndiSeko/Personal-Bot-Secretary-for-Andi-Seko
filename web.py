@@ -98,20 +98,33 @@ async def index(request: Request):
             return HTMLResponse("<html><body style='background:#1a1a2e;color:#e0e0e0;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif'><div style='text-align:center'><h2>Доступ запрещён</h2><p style='color:#6b7280;margin-top:8px'>Этот кабинет только для владельца</p></div></body></html>")
         return templates.TemplateResponse(request, "login.html", {"request": request, "error": False})
 
-    reminders = await db.get_all_reminders()
-    messages = await db.get_messages(limit=50)
-    calendar_events = await db.get_all_calendar_events()
-    tasks = await db.get_tasks()
-    notes = await db.get_notes(limit=50)
-    habits = await db.get_habits()
-    expenses = await db.get_expenses(limit=50)
-    watchers = await db.get_watchers()
-    # enrich watchers with urls
-    for w in watchers:
-        w["urls"] = await db.get_watcher_urls(w["id"])
-        # last prices preview
-        w["min_price"] = min([u["last_price"] for u in w["urls"] if u.get("last_price")], default=None)
-        w["max_price"] = max([u["last_price"] for u in w["urls"] if u.get("last_price")], default=None)
+    import asyncio as _aio
+    import time as _time
+    _t0 = _time.monotonic()
+    # Было 10+N последовательных roundtrip'ов к Neon — теперь 2 захода:
+    # 1) все независимые запросы параллельно, 2) urls вотчеров параллельно.
+    (reminders, messages, calendar_events, tasks, notes,
+     habits, expenses, watchers, theme_json) = await _aio.gather(
+        db.get_all_reminders(),
+        db.get_messages(limit=50),
+        db.get_all_calendar_events(),
+        db.get_tasks(),
+        db.get_notes(limit=50),
+        db.get_habits(),
+        db.get_expenses(limit=50),
+        db.get_watchers(),
+        db.get_setting("theme"),
+    )
+    # enrich watchers with urls — параллельно, а не N запросов по очереди
+    if watchers:
+        _urls_lists = await _aio.gather(*[db.get_watcher_urls(w["id"]) for w in watchers])
+        for w, _urls in zip(watchers, _urls_lists):
+            w["urls"] = _urls
+            # last prices preview
+            w["min_price"] = min([u["last_price"] for u in _urls if u.get("last_price")], default=None)
+            w["max_price"] = max([u["last_price"] for u in _urls if u.get("last_price")], default=None)
+    import logging as _logging
+    _logging.getLogger(__name__).debug("index db fetch %.0fms", (_time.monotonic() - _t0) * 1000)
 
     active_count = len(reminders)
     cyclic_count = sum(1 for r in reminders if r['is_cyclic'])
@@ -167,8 +180,7 @@ async def index(request: Request):
         else:
             ev['offset_fmt'] = "в момент события"
 
-    # theme settings
-    theme_json = await db.get_setting("theme")
+    # theme settings (theme_json уже получен через gather выше)
     theme = None
     if theme_json:
         try:
