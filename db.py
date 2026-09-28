@@ -30,8 +30,23 @@ async def _get_pool():
         return _pool
 
 
+import logging as _logging
+_logger = _logging.getLogger(__name__)
+
+# Если Postgres упал (suspend/expire как Render Free) — не крашим сервис,
+# а один раз переключаемся на SQLite и пишем ясный лог.
+_PG_FAILED = False
+
+
 def _is_postgres() -> bool:
-    return bool(IS_POSTGRES and DATABASE_URL)
+    return bool(IS_POSTGRES and DATABASE_URL and not _PG_FAILED)
+
+
+def _mark_pg_failed(reason: Exception | str):
+    global _PG_FAILED, _pool
+    _PG_FAILED = True
+    _pool = None
+    _logger.warning("Postgres недоступен (%s) — переключаюсь на SQLite %s. Проверь DATABASE_URL (Render Free DB expire?)", reason, DB_PATH)
 
 
 # ─── SQLite helpers (unchanged logic) ───
@@ -39,6 +54,15 @@ import aiosqlite as _aiosqlite  # always available as fallback
 
 
 async def init_db():
+    # Probe: если Postgres недоступен (Render Free suspend/expire) —
+    # помечаем fallback и идём на SQLite, сервис не падает.
+    if _is_postgres():
+        try:
+            _probe = await _get_pool()
+            async with _probe.acquire() as _c:
+                await _c.execute("SELECT 1")
+        except Exception as _e:
+            _mark_pg_failed(_e)
     if _is_postgres():
         pool = await _get_pool()
         async with pool.acquire() as conn:

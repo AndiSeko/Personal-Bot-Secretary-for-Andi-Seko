@@ -20,16 +20,11 @@ services:
       - key: GROQ_API_KEY
         sync: false
       - key: DATABASE_URL
-        fromDatabase:
-          name: secretary-db
-          property: connectionString
+        sync: false
       - key: PORT
         value: 10000
-    autoDeploy: false
+    autoDeploy: true
 
-databases:
-  - name: secretary-db
-    plan: free
-    # Render free Postgres удаляется через 30 дней и требует пересоздания.
-    # Для вечного фри — замени на Neon (https://neon.tech) и задай DATABASE_URL вручную,
-    # либо поставь план starter ($7). См. HOSTING.md
+# Render Free Postgres (secretary-db) — УДАЛЁН: expire через ~30 дней, suspend + удаление через 14 дней.
+# Не привязываем сервис к fromDatabase — DATABASE_URL задаётся вручную из Neon (free, вечный).
+# См. HOSTING.md раздел 2 Вариант A. Старую secretary-db можно удалить после переезда.
